@@ -2,8 +2,14 @@ import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 
 import Grid from "@mui/material/Grid";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
+import TextField from "@mui/material/TextField";
 import { FileBrowser as ChonckFileBrowser, FileNavbar, FileToolbar, FileList, FileContextMenu, FileArray, FileBrowserHandle } from "@samuelncui/chonky";
-import { ChonkyActions, ChonkyFileActionData } from "@samuelncui/chonky";
+import { ChonkyActions, ChonkyFileActionData, FileData } from "@samuelncui/chonky";
 
 import { cli, convertFiles } from "../api";
 import { Root } from "../api";
@@ -13,6 +19,26 @@ import { ToobarInfo } from "../components/toolbarInfo";
 import { useDetailModal, DetailModal } from "./file-detail";
 import { FileGetReply } from "../entity";
 import { chonkyI18n } from "../tools";
+
+type InputDialogState =
+  | {
+      mode: "create";
+      open: true;
+      initialValue: string;
+      title: string;
+      label: string;
+    }
+  | {
+      mode: "rename";
+      open: true;
+      initialValue: string;
+      title: string;
+      label: string;
+      file: FileData;
+    }
+  | {
+      open: false;
+    };
 
 const useDualSide = () => {
   const left = useRef<FileBrowserHandle>(null);
@@ -36,6 +62,7 @@ const useDualSide = () => {
 const useFileBrowser = (storageKey: string, refreshAll: () => Promise<void>, openDetailModel: (detail: FileGetReply) => void) => {
   const [files, setFiles] = useState<FileArray>(Array(1).fill(null));
   const [folderChain, setFolderChan] = useState<FileArray>([Root]);
+  const [inputDialog, setInputDialog] = useState<InputDialogState>({ open: false });
   const currentID = useMemo(() => {
     if (folderChain.length === 0) {
       return "0";
@@ -75,6 +102,37 @@ const useFileBrowser = (storageKey: string, refreshAll: () => Promise<void>, ope
     })();
   }, []);
 
+  const closeInputDialog = useCallback(() => {
+    setInputDialog({ open: false });
+  }, []);
+
+  const submitInputDialog = useCallback(
+    async (value: string) => {
+      const trimmed = value.trim();
+      if (!trimmed) {
+        closeInputDialog();
+        return;
+      }
+
+      if (!inputDialog.open) {
+        return;
+      }
+
+      switch (inputDialog.mode) {
+        case "create":
+          await cli.fileMkdir({ parentId: BigInt(currentID), path: trimmed }).response;
+          break;
+        case "rename":
+          await cli.fileEdit({ id: BigInt(inputDialog.file.id), file: { name: trimmed } }).response;
+          break;
+      }
+
+      closeInputDialog();
+      await refreshAll();
+    },
+    [closeInputDialog, currentID, inputDialog, refreshAll],
+  );
+
   const onFileAction = useCallback(
     (data: ChonkyFileActionData) => {
       switch (data.id) {
@@ -111,32 +169,30 @@ const useFileBrowser = (storageKey: string, refreshAll: () => Promise<void>, ope
 
           return;
         case RenameFileAction.id:
-          (async () => {
+          (() => {
             const files = data.state.selectedFilesForAction;
             if (files.length === 0) {
               return;
             }
-            const file = files[0];
 
-            const name = prompt("Nuevo nombre para el archivo:", file.name);
-            if (!name) {
-              return;
-            }
-
-            await cli.fileEdit({ id: BigInt(file.id), file: { name } }).response;
-            await refreshAll();
+            setInputDialog({
+              mode: "rename",
+              open: true,
+              title: "Renombrar Archivo",
+              label: "Nuevo nombre",
+              initialValue: files[0].name,
+              file: files[0],
+            });
           })();
           return;
         case CreateFolder.id:
-          (async () => {
-            const name = prompt("Nombre para la nueva carpeta:");
-            if (!name) {
-              return;
-            }
-
-            await cli.fileMkdir({ parentId: BigInt(currentID), path: name }).response;
-            await refreshAll();
-          })();
+          setInputDialog({
+            mode: "create",
+            open: true,
+            title: "Crear Carpeta",
+            label: "Nombre de la carpeta",
+            initialValue: "",
+          });
           return;
         case ChonkyActions.DeleteFiles.id:
           (async () => {
@@ -170,6 +226,9 @@ const useFileBrowser = (storageKey: string, refreshAll: () => Promise<void>, ope
     files,
     folderChain,
     onFileAction,
+    inputDialog,
+    closeInputDialog,
+    submitInputDialog,
     fileActions,
     defaultFileViewActionId: ChonkyActions.EnableListView.id,
     doubleClickDelay: 300,
@@ -220,6 +279,61 @@ export const FileBrowser = () => {
         </Grid>
       </Grid>
       <DetailModal detail={detail} onClose={closeDetailModel} />
+      <InputDialog
+        state={leftProps.inputDialog.open ? leftProps.inputDialog : rightProps.inputDialog}
+        onClose={leftProps.inputDialog.open ? leftProps.closeInputDialog : rightProps.closeInputDialog}
+        onSubmit={leftProps.inputDialog.open ? leftProps.submitInputDialog : rightProps.submitInputDialog}
+      />
     </Box>
+  );
+};
+
+const InputDialog = ({
+  state,
+  onClose,
+  onSubmit,
+}: {
+  state: InputDialogState;
+  onClose: () => void;
+  onSubmit: (value: string) => Promise<void>;
+}) => {
+  const [value, setValue] = useState("");
+
+  useEffect(() => {
+    setValue(state.open ? state.initialValue : "");
+  }, [state]);
+
+  return (
+    <Dialog
+      open={state.open}
+      onClose={onClose}
+      maxWidth={"sm"}
+      fullWidth
+      PaperProps={{
+        component: "form",
+        onSubmit: async (event: React.FormEvent<HTMLFormElement>) => {
+          event.preventDefault();
+          await onSubmit(value);
+        },
+      }}
+    >
+      <DialogTitle>{state.open ? state.title : ""}</DialogTitle>
+      <DialogContent>
+        <TextField
+          autoFocus
+          fullWidth
+          margin="dense"
+          label={state.open ? state.label : ""}
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button type="submit" variant="contained">
+          Submit
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };

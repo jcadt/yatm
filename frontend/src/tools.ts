@@ -19,7 +19,7 @@ export const formatFilesize = (size: number | bigint): string =>
   }) as string;
 
 export const download = (buf: Uint8Array, filename: string, contentType: string) => {
-  const blob = new Blob([buf], { type: contentType });
+  const blob = new Blob([buf.slice().buffer], { type: contentType });
 
   const link = document.createElement("a");
   link.href = window.URL.createObjectURL(blob);
