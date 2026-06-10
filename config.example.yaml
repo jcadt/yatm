@@ -1,38 +1,38 @@
-# domain used by user interface
+# dominio usado por la interfaz de usuario
 domain: http://127.0.0.1:8080
-# http service binding
+# enlace del servicio HTTP
 listen: 127.0.0.1:8080
-# debug port binding
+# puerto de depuración
 debug_listen: 127.0.0.1:8081
 
-# database settings, you can use sqlite or mysql (untested)
+# configuración de la base de datos, puedes usar sqlite o mysql (sin probar)
 database:
   dialect: sqlite
   dsn: ./tapes.db
 
-# usable tape drivers, must have sg device mapping.
-# use `sg_map` command (in sg3_utils package) to get corresponding device with sg device mapping.
+# unidades de cinta disponibles, deben tener mapeo sg.
+# usa el comando `sg_map` (del paquete sg3_utils) para obtener el dispositivo sg correspondiente.
 tape_devices:
   - /dev/tape/by-id/scsi-HUJ0000000
 
-# working path settings
+# configuración de rutas de trabajo
 paths:
-  # to save logs and write reports
+  # para guardar logs y escribir informes
   work: ./
-  # source in backup job creator
+  # directorio origen en el creador de backups
   source: ./
-  # restore job target path
+  # directorio destino para restauración
   target: ./
 
-# those scripts interact with external software, you may need to change them for your use cases.
+# estos scripts interactúan con software externo, puede que necesites cambiarlos para tu caso.
 scripts:
-  # enable hardware encryption on tape driver
+  # activa el cifrado hardware en la unidad de cinta
   encrypt: ./scripts/encrypt
-  # format ltfs on lto tape, may need to be changed for different ltfs software.
+  # formatea LTFS en cinta LTO, puede necesitar cambios según el software LTFS.
   mkfs: ./scripts/mkfs
-  # mount ltfs to specified path, may need to be changed for different ltfs software.
+  # monta LTFS en la ruta especificada, puede necesitar cambios según el software LTFS.
   mount: ./scripts/mount
-  # umount ltfs path
+  # desmonta ruta LTFS
   umount: ./scripts/umount
-  # read tape barcode for restore jobs
+  # lee el barcode de la cinta para trabajos de restauración
   read_info: ./scripts/readinfo

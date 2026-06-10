@@ -98,7 +98,7 @@ const useBackupSourceBrowser = (targetFiles: FileArray, source: RefObject<FileBr
 const targetFolderChain = [
   {
     id: "backup_waitlist",
-    name: "Backup Waitlist",
+    name: "Lista de Backup",
     isDir: true,
     openable: true,
     selectable: true,
@@ -184,7 +184,7 @@ const useBackupTargetBrowser = () => {
 
             const req = makeArchiveParam(1n, { sources });
             console.log(req, await cli.jobCreate(req).response);
-            toast.success("Create Backup Job Success!");
+            toast.success("¡Trabajo de backup creado!");
           })();
           return;
       }

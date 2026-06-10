@@ -15,7 +15,7 @@ func (api *API) FileMkdir(ctx context.Context, req *entity.FileMkdirRequest) (*e
 			return nil, err
 		}
 		if parent == nil {
-			return nil, fmt.Errorf("file not found, id= %d", req.ParentId)
+			return nil, fmt.Errorf("archivo no encontrado, id= %d", req.ParentId)
 		}
 	}
 

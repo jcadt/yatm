@@ -13,15 +13,15 @@ func (api *API) JobEditState(ctx context.Context, req *entity.JobEditStateReques
 		return nil, err
 	}
 	if job == nil {
-		return nil, fmt.Errorf("job not found, id= %d", req.Id)
+		return nil, fmt.Errorf("trabajo no encontrado, id= %d", req.Id)
 	}
 
 	if job.Status == entity.JobStatus_PROCESSING {
-		return nil, fmt.Errorf("job status 'PROCESSING' is unexpected")
+		return nil, fmt.Errorf("el estado del trabajo 'PROCESSING' es inesperado")
 	}
 	if req.Status != nil {
 		if *req.Status == entity.JobStatus_PROCESSING {
-			return nil, fmt.Errorf("job target status 'PROCESSING' is unexpected")
+			return nil, fmt.Errorf("el estado destino del trabajo 'PROCESSING' es inesperado")
 		}
 		job.Status = *req.Status
 	}

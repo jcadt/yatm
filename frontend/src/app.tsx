@@ -65,14 +65,14 @@ const App = () => {
       toast.error(
         <div>
           <ErrorMessage>
-            <b>RPC Request Error</b>
+            <b>Error de solicitud RPC</b>
           </ErrorMessage>
           <ErrorMessage>
-            <b>Method: </b>
+            <b>Método: </b>
             {error.reason.methodName}
           </ErrorMessage>
           <ErrorMessage>
-            <b>Message: </b>
+            <b>Mensaje: </b>
             {error.reason.message}
           </ErrorMessage>
         </div>,
@@ -95,11 +95,11 @@ const App = () => {
           scrollButtons="auto"
           allowScrollButtonsMobile
         >
-          <Tab label="File" value={FileBrowserType} />
+          <Tab label="Archivos" value={FileBrowserType} />
           <Tab label="Backup" value={BackupType} />
-          <Tab label="Restore" value={RestoreType} />
-          <Tab label="Tapes" value={TapesType} />
-          <Tab label="Jobs" value={JobsType} />
+          <Tab label="Restaurar" value={RestoreType} />
+          <Tab label="Cintas" value={TapesType} />
+          <Tab label="Trabajos" value={JobsType} />
         </Tabs>
         <Routes>
           <Route path="/*">

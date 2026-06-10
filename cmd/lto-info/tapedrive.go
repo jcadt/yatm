@@ -66,10 +66,10 @@ func OpenScsiDeviceRO(fname string) (*os.File, error) {
 		uintptr(unsafe.Pointer(&version)),
 	)
 	if errno != 0 {
-		return nil, fmt.Errorf("failed to get version info from sg device (errno=%d)", errno)
+		return nil, fmt.Errorf("error al obtener info de versión del dispositivo sg (errno=%d)", errno)
 	}
 	if version < 30000 {
-		return nil, fmt.Errorf("device does not appear to be an sg device")
+		return nil, fmt.Errorf("el dispositivo no parece ser un dispositivo sg")
 	}
 	return f, nil
 }
@@ -85,18 +85,18 @@ func TapeDriveNew(devicename string) (*TapeDrive, error) {
 
 	drive := &TapeDrive{DeviceName: devicename, CmList: CmNew()}
 	if drive.IsFake() {
-		fmt.Println("Will use a fake tape drive")
+		fmt.Println("Se usará una unidad de cinta simulada")
 		return drive, nil
 	}
 
-	fmt.Printf("Opening device %s\n", devicename)
+	fmt.Printf("Abriendo dispositivo %s\n", devicename)
 	dev, err := OpenScsiDeviceRO(devicename)
 	if err != nil {
-		fmt.Println("Failed to open:", err)
+		fmt.Println("Error al abrir:", err)
 		return nil, err
 	}
 
-	fmt.Println("Checking whether device is ready")
+	fmt.Println("Comprobando si el dispositivo está listo")
 	err = sgio.TestUnitReady(dev)
 	if err != nil {
 		fmt.Println("Unit is not ready:", err)

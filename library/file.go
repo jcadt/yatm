@@ -21,8 +21,8 @@ var (
 	ModelFile         = new(File)
 	SignatureV1Header = []byte{0x01}
 
-	ErrFileNotFound          = fmt.Errorf("get file: file not found")
-	ErrMkdirNonDirFileExists = fmt.Errorf("mkdir: non dir exists")
+	ErrFileNotFound          = fmt.Errorf("archivo no encontrado")
+	ErrMkdirNonDirFileExists = fmt.Errorf("mkdir: ya existe un archivo no directorio")
 	ErrMkdirDirExists        = fmt.Errorf("mkdir: dir exists")
 	ErrNewFileFileExists     = fmt.Errorf("new file: file exists")
 

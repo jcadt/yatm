@@ -9,8 +9,8 @@ sleep 3
 
 MOUNT_POINT_TARGET=`df ${MOUNT_POINT} --output=target | sed -n '1!p'`
 if [[ $MOUNT_POINT != $MOUNT_POINT_TARGET ]]; then
-    echo "mount '$MOUNT_POINT' fail, current target is '$MOUNT_POINT_TARGET'" >&2
+    echo "fallo al montar '$MOUNT_POINT', destino actual: '$MOUNT_POINT_TARGET'" >&2
     exit 1
 fi
 
-echo "mount '$MOUNT_POINT' success" >&2
+echo "montaje '$MOUNT_POINT' correcto" >&2

@@ -20,12 +20,12 @@ identify_the_operating_system_and_architecture() {
         MACHINE='amd64'
         ;;
       *)
-        echo "error: The architecture is not supported."
+        echo "error: La arquitectura no está soportada."
         exit 1
         ;;
     esac
   else
-    echo "error: This operating system is not supported."
+    echo "error: Este sistema operativo no está soportado."
     exit 1
   fi
 }
@@ -35,7 +35,7 @@ judgment_parameters() {
   while [[ "$#" -gt '0' ]]; do
     case "$1" in
       '--version')
-        VERSION="${2:?error: Please specify the correct version.}"
+        VERSION="${2:?error: Especifica la versión correcta.}"
         break
         ;;
       '-h' | '--help')
@@ -43,7 +43,7 @@ judgment_parameters() {
         break
         ;;
       *)
-        echo "$0: unknown option -- -"
+        echo "$0: opción desconocida -- -"
         exit 1
         ;;
     esac
@@ -70,14 +70,14 @@ get_version() {
   TMP_FILE="$(mktemp)"
   if ! curl -x "${PROXY}" -sS -i -H "Accept: application/vnd.github.v3+json" -o "$TMP_FILE" 'https://api.github.com/repos/samuelncui/yatm/releases/latest'; then
     "rm" "$TMP_FILE"
-    echo 'error: Failed to get release list, please check your network.'
+    echo 'error: No se pudo obtener la lista de versiones, comprueba tu red.'
     exit 1
   fi
 
   HTTP_STATUS_CODE=$(awk 'NR==1 {print $2}' "$TMP_FILE")
   if [[ $HTTP_STATUS_CODE -lt 200 ]] || [[ $HTTP_STATUS_CODE -gt 299 ]]; then
     "rm" "$TMP_FILE"
-    echo "error: Failed to get release list, GitHub API response code: $HTTP_STATUS_CODE"
+    echo "error: No se pudo obtener la lista de versiones, código de respuesta GitHub API: $HTTP_STATUS_CODE"
     exit 1
   fi
 
@@ -96,18 +96,18 @@ get_version() {
 download_yatm() {
   DOWNLOAD_LINK="https://github.com/samuelncui/yatm/releases/download/$RELEASE_VERSION/yatm-linux-$MACHINE-$RELEASE_VERSION.tar.gz"
 
-  echo "Downloading YATM archive: $DOWNLOAD_LINK"
+  echo "Descargando archivo YATM: $DOWNLOAD_LINK"
   if ! curl -x "${PROXY}" -R -H 'Cache-Control: no-cache' -o "$GZIP_FILE" "$DOWNLOAD_LINK"; then
-    echo 'error: Download failed! Please check your network or try again.'
+    echo 'error: Descarga fallida. Comprueba tu red o inténtalo de nuevo.'
     return 1
   fi
 }
 
 # Explanation of parameters in the script
 show_help() {
-  echo "usage:"
-  echo '  --version       Install the specified version of YATM, e.g., --version v0.1.0'
-  echo '  -h, --help      Show help'
+  echo "uso:"
+  echo '  --version       Instala la versión especificada de YATM, ej: --version v0.1.0'
+  echo '  -h, --help      Muestra esta ayuda'
   exit 0
 }
 
@@ -124,17 +124,17 @@ main() {
   get_version
   NUMBER="$?"
   if [[ "$NUMBER" -eq '1' ]]; then
-    echo "info: No new version. The current version of YATM is $CURRENT_VERSION."
+    echo "info: No hay nueva versión. La versión actual de YATM es $CURRENT_VERSION."
     exit 0
   fi
 
-  echo "info: Installing YATM $RELEASE_VERSION for $(uname -m)"
+  echo "info: Instalando YATM $RELEASE_VERSION para $(uname -m)"
   GZIP_FILE="${TMP_DIRECTORY}/yatm-linux-$MACHINE-$RELEASE_VERSION.tar.gz"
 
   download_yatm
   if [[ "$?" -eq '1' ]]; then
     "rm" -r "$TMP_DIRECTORY"
-    echo "removed: $TMP_DIRECTORY"
+    echo "eliminado: $TMP_DIRECTORY"
     exit 1
   fi
 
@@ -144,7 +144,7 @@ main() {
   if [[ ! -f '/opt/yatm/config.yaml' ]]; then
     cp /opt/yatm/config.example.yaml /opt/yatm/config.yaml;
     vim /opt/yatm/config.yaml;
-    echo "Copy example config to /opt/yatm/config.yaml, you may edit it later";
+    echo "Configuración de ejemplo copiada a /opt/yatm/config.yaml, puedes editarla después";
   fi
 
   systemctl daemon-reload

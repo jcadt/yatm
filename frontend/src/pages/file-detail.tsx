@@ -72,7 +72,7 @@ export const DetailModal = (props: Omit<DialogProps, "open" | "children"> & { de
               <Grid container spacing={1}>
                 <Grid item xs={4}>
                   <p>
-                    <b>Tape ID</b>
+                    <b>ID Cinta</b>
                   </p>
                 </Grid>
                 <Grid item xs={8}>
@@ -81,7 +81,7 @@ export const DetailModal = (props: Omit<DialogProps, "open" | "children"> & { de
 
                 <Grid item xs={4}>
                   <p>
-                    <b>Tape Name</b>
+                    <b>Nombre Cinta</b>
                   </p>
                 </Grid>
                 <Grid item xs={8}>
@@ -90,7 +90,7 @@ export const DetailModal = (props: Omit<DialogProps, "open" | "children"> & { de
 
                 <Grid item xs={4}>
                   <p>
-                    <b>Tape Create Time</b>
+                    <b>Creación Cinta</b>
                   </p>
                 </Grid>
                 <Grid item xs={8}>
@@ -99,7 +99,7 @@ export const DetailModal = (props: Omit<DialogProps, "open" | "children"> & { de
 
                 <Grid item xs={4}>
                   <p>
-                    <b>Tape Destroy Time</b>
+                    <b>Destrucción Cinta</b>
                   </p>
                 </Grid>
                 <Grid item xs={8}>
@@ -108,7 +108,7 @@ export const DetailModal = (props: Omit<DialogProps, "open" | "children"> & { de
 
                 <Grid item xs={4}>
                   <p>
-                    <b>Tape Capacity</b>
+                    <b>Capacidad Cinta</b>
                   </p>
                 </Grid>
                 <Grid item xs={8}>
@@ -117,7 +117,7 @@ export const DetailModal = (props: Omit<DialogProps, "open" | "children"> & { de
 
                 <Grid item xs={4}>
                   <p>
-                    <b>Tape Writen</b>
+                    <b>Escrito Cinta</b>
                   </p>
                 </Grid>
                 <Grid item xs={8}>
@@ -126,7 +126,7 @@ export const DetailModal = (props: Omit<DialogProps, "open" | "children"> & { de
 
                 <Grid item xs={4}>
                   <p>
-                    <b>Path</b>
+                    <b>Ruta</b>
                   </p>
                 </Grid>
                 <Grid item xs={8}>
@@ -135,7 +135,7 @@ export const DetailModal = (props: Omit<DialogProps, "open" | "children"> & { de
 
                 <Grid item xs={4}>
                   <p>
-                    <b>Permission</b>
+                    <b>Permisos</b>
                   </p>
                 </Grid>
                 <Grid item xs={8}>
@@ -144,7 +144,7 @@ export const DetailModal = (props: Omit<DialogProps, "open" | "children"> & { de
 
                 <Grid item xs={4}>
                   <p>
-                    <b>Modify Time</b>
+                    <b>Modificación</b>
                   </p>
                 </Grid>
                 <Grid item xs={8}>
@@ -153,7 +153,7 @@ export const DetailModal = (props: Omit<DialogProps, "open" | "children"> & { de
 
                 <Grid item xs={4}>
                   <p>
-                    <b>Write Time</b>
+                    <b>Escritura</b>
                   </p>
                 </Grid>
                 <Grid item xs={8}>
@@ -162,7 +162,7 @@ export const DetailModal = (props: Omit<DialogProps, "open" | "children"> & { de
 
                 <Grid item xs={4}>
                   <p>
-                    <b>Size</b>
+                    <b>Tamaño</b>
                   </p>
                 </Grid>
                 <Grid item xs={8}>

@@ -38,7 +38,7 @@ func (api *API) SourceList(ctx context.Context, req *entity.SourceListRequest) (
 
 		files := convertSourceFiles(current, stat)
 		if len(files) == 0 {
-			return nil, fmt.Errorf("unexpected file, %s", current+part)
+			return nil, fmt.Errorf("archivo inesperado, %s", current+part)
 		}
 
 		file := files[0]
@@ -51,7 +51,7 @@ func (api *API) SourceList(ctx context.Context, req *entity.SourceListRequest) (
 		current = path.Join(current, part)
 	}
 	if len(chain) == 0 {
-		return nil, fmt.Errorf("unexpected file, '%s'", req.Path)
+		return nil, fmt.Errorf("archivo inesperado, '%s'", req.Path)
 	}
 
 	chain[0].Path = "./"

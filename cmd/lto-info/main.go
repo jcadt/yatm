@@ -57,7 +57,7 @@ waitfor:
 		select {
 		case openerr = <-syncerr:
 			if openerr != nil {
-				fmt.Println("Failed")
+				fmt.Println("Falló")
 				os.Exit(1)
 			} else {
 				// openerr
@@ -65,17 +65,17 @@ waitfor:
 			}
 		default:
 			if time.Since(lastprint) > time.Second {
-				fmt.Printf("Still trying to open the device, aborting in %s...\n", time.Until(waitupto).Round(time.Second))
+				fmt.Printf("Todavía intentando abrir el dispositivo, abortando en %s...\n", time.Until(waitupto).Round(time.Second))
 				lastprint = time.Now()
 			}
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
 	if openerr != nil {
-		fmt.Println("Timed out opening device, is a tape inserted?")
+		fmt.Println("Tiempo de espera agotado al abrir el dispositivo, ¿hay una cinta insertada?")
 		os.Exit(1)
 	} else {
-		fmt.Printf("Device %s opened\n", drive.DeviceName)
+		fmt.Printf("Dispositivo %s abierto\n", drive.DeviceName)
 	}
 
 	if options.Dump != "" {

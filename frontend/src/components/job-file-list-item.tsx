@@ -23,7 +23,7 @@ export const FileListItem = memo(({ src, onClick, className }: { src?: FileState
     return null;
   }
 
-  const text = <FileListItemText primary={src.path} secondary={`Size: ${formatFilesize(src.size)} Status: ${CopyStatus[src.status]}`} />;
+  const text = <FileListItemText primary={src.path} secondary={`Tamaño: ${formatFilesize(src.size)} Estado: ${CopyStatus[src.status]}`} />;
   if (!onClick) {
     return (
       <ListItem component="div" className={className} disablePadding>

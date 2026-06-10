@@ -28,6 +28,6 @@ func (api *API) JobList(ctx context.Context, req *entity.JobListRequest) (*entit
 		}
 		return &entity.JobListReply{Jobs: convertJobs(jobs...)}, nil
 	default:
-		return nil, fmt.Errorf("unexpected param, %T", req.Param)
+		return nil, fmt.Errorf("parámetro inesperado, %T", req.Param)
 	}
 }

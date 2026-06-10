@@ -5,7 +5,7 @@ DEVICE=`readlink -f ${DEVICE}`
 REGEXP='/dev/n?st([0-9]+)[alm]?'
 
 if [[ ! $DEVICE =~ $REGEXP ]]; then
-    echo "'$DEVICE' doesn't match" >&2
+    echo "'$DEVICE' no coincide" >&2
     exit 1
 fi
 
@@ -20,5 +20,5 @@ for TRY in ${TRIES[@]}; do
     fi
 done
 
-echo "'$DEVICE' not found" >&2
+echo "'$DEVICE' no encontrado" >&2
 exit 1

@@ -17,7 +17,7 @@ import { RefreshContext } from "../pages/jobs";
 const DeleteJobButton = ({ jobID }: { jobID: bigint }) => {
   const refresh = useContext(RefreshContext);
   const deleteJob = useCallback(async () => {
-    if (!confirm(`Delete job ${jobID}, this may cause data loss.`)) {
+    if (!confirm(`Eliminar trabajo ${jobID}, puede causar pérdida de datos.`)) {
       return;
     }
 
@@ -27,7 +27,7 @@ const DeleteJobButton = ({ jobID }: { jobID: bigint }) => {
 
   return (
     <Button size="small" onClick={deleteJob}>
-      Delete Job
+      Eliminar Trabajo
     </Button>
   );
 };

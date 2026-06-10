@@ -70,12 +70,12 @@ func main() {
 		types = append(types, e)
 	}
 	if len(types) == 0 {
-		panic(fmt.Errorf("cannot found types, use 'types' option to specify at least one type"))
+		panic(fmt.Errorf("no se encontraron tipos, usa la opción 'types' para especificar al menos un tipo"))
 	}
 
 	jsonBuf, err := lib.Export(ctx, types)
 	if err != nil {
-		panic(fmt.Errorf("export json fail, %w", err))
+		panic(fmt.Errorf("error al exportar json, %w", err))
 	}
 
 	f := func() io.WriteCloser {
@@ -85,13 +85,13 @@ func main() {
 
 		f, err := os.Create(*outputOpt)
 		if err != nil {
-			panic(fmt.Errorf("open output file fail, path= '%s', %w", *outputOpt, err))
+			panic(fmt.Errorf("error al abrir archivo de salida, ruta= '%s', %w", *outputOpt, err))
 		}
 		return f
 	}()
 
 	defer f.Close()
 	if _, err := f.Write(jsonBuf); err != nil {
-		panic(fmt.Errorf("write output file fail, %w", err))
+		panic(fmt.Errorf("error al escribir archivo de salida, %w", err))
 	}
 }

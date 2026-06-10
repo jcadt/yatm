@@ -20,7 +20,7 @@ export const RenameFileAction = defineFileAction({
   id: "rename_file",
   requiresSelection: true,
   button: {
-    name: "Rename File",
+    name: "Renombrar Archivo",
     toolbar: true,
     contextMenu: true,
     group: "Actions",
@@ -32,7 +32,7 @@ export const RenameFileAction = defineFileAction({
 export const GetDataUsageAction = defineFileAction({
   id: "get_data_usage",
   button: {
-    name: "Data Usage",
+    name: "Uso de Datos",
     toolbar: true,
     icon: "mui-data-usage",
     // iconOnly: true,
@@ -52,7 +52,7 @@ export const AddFileAction = defineFileAction({
 export const CreateBackupJobAction = defineFileAction({
   id: "create_backup_job",
   button: {
-    name: "Create Backup Job",
+    name: "Crear Backup",
     toolbar: true,
     icon: "mui-fiber-new",
   },
@@ -61,7 +61,7 @@ export const CreateBackupJobAction = defineFileAction({
 export const CreateRestoreJobAction = defineFileAction({
   id: "create_restore_job",
   button: {
-    name: "Create Restore Job",
+    name: "Crear Restauración",
     toolbar: true,
     icon: "mui-fiber-new",
   },
@@ -70,7 +70,7 @@ export const CreateRestoreJobAction = defineFileAction({
 export const TrimLibraryAction = defineFileAction({
   id: "trim_library",
   button: {
-    name: "Trim Library",
+    name: "Limpiar Librería",
     toolbar: true,
     icon: "mui-cleaning",
   },

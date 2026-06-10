@@ -98,7 +98,7 @@ const useTapesSourceBrowser = (source: RefObject<FileBrowserHandle>) => {
         case ChonkyActions.DeleteFiles.id:
           (async () => {
             const targetTapes = data.state.selectedFiles;
-            if (!confirm(`Following tapes will be deleted, may cause data loss. Are you sure?\n${targetTapes.map((tape) => tape.name).join(", ")}`)) {
+            if (!confirm(`Se eliminarán las siguientes cintas, puede causar pérdida de datos. ¿Estás seguro?\n${targetTapes.map((tape) => tape.name).join(", ")}`)) {
               return;
             }
             await cli.tapeDelete({ ids: targetTapes.filter((file) => file.isTape).map((file) => BigInt(file.id)) });
@@ -107,12 +107,12 @@ const useTapesSourceBrowser = (source: RefObject<FileBrowserHandle>) => {
           return;
         case TrimLibraryAction.id:
           (async () => {
-            if (!confirm(`Empty pointer in library will be trimed, may cause data loss. Are you sure?`)) {
+            if (!confirm(`Se limpiarán los punteros vacíos de la librería, puede causar pérdida de datos. ¿Estás seguro?`)) {
               return;
             }
 
             console.log(await cli.libraryTrim({ trimFile: true, trimPosition: true }).response);
-            toast.success("Trim Library Success!");
+            toast.success("¡Librería limpiada!");
           })();
           return;
       }

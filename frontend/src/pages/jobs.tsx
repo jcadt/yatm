@@ -136,7 +136,7 @@ export const JobsBrowser = () => {
                   download(resp.json, "library.json", "application/json");
                 }}
               >
-                <ListItemText primary="Export Library" />
+                <ListItemText primary="Exportar Librería" />
               </ListItemButton>
               <ImportDatabaseDialog />
             </List>
@@ -187,21 +187,21 @@ const ImportDatabaseDialog = () => {
   return (
     <Fragment>
       <ListItemButton onClick={handleClickOpen}>
-        <ListItemText primary="Import Library" />
+        <ListItemText primary="Importar Librería" />
       </ListItemButton>
       {open && (
         <Dialog open={true} onClose={handleClose} maxWidth={"sm"} fullWidth>
-          <DialogTitle>Upload Library JSON</DialogTitle>
+          <DialogTitle>Subir JSON de Librería</DialogTitle>
           <DialogContent>
             <Button variant="contained" component="label">
-              Upload File
+              Seleccionar Archivo
               <input type="file" onChange={handleChange} hidden />
             </Button>
             {file && <p>{file.name}</p>}
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleClose}>Cancel</Button>
-            <Button onClick={handleSubmit}>Submit</Button>
+            <Button onClick={handleClose}>Cancelar</Button>
+            <Button onClick={handleSubmit}>Enviar</Button>
           </DialogActions>
         </Dialog>
       )}

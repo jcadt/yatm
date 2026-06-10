@@ -60,15 +60,15 @@ export const ArchiveCard = ({ job, state, display }: { job: Job; state: JobArchi
 
     const progress = (totalBytes > 0 ? copiedBytes / totalBytes : 1) * 100;
     const fields = [
-      { name: "Current Step", value: JobArchiveStep[state.step] },
-      { name: "Current Speed", value: display?.speed ? `${formatFilesize(display?.speed)}/s` : "--" },
-      { name: "Average Speed", value: !isNaN(avgSpeed) ? `${formatFilesize(avgSpeed)}/s` : "--" },
-      { name: "Estimated Time", value: !isNaN(avgSpeed) ? format(((totalBytes - copiedBytes) * 1000) / avgSpeed) : "--" },
-      { name: "Copied Files", value: copiedFiles },
-      { name: "Copied Bytes", value: formatFilesize(copiedBytes) },
-      { name: "Submited Files", value: submitedFiles },
-      { name: "Submited Bytes", value: formatFilesize(submitedBytes) },
-      { name: "Total Files", value: totalFiles },
+      { name: "Paso Actual", value: JobArchiveStep[state.step] },
+      { name: "Velocidad Actual", value: display?.speed ? `${formatFilesize(display?.speed)}/s` : "--" },
+      { name: "Vel. Media", value: !isNaN(avgSpeed) ? `${formatFilesize(avgSpeed)}/s` : "--" },
+      { name: "Tiempo Estimado", value: !isNaN(avgSpeed) ? format(((totalBytes - copiedBytes) * 1000) / avgSpeed) : "--" },
+      { name: "Archivos Copiados", value: copiedFiles },
+      { name: "Bytes Copiados", value: formatFilesize(copiedBytes) },
+      { name: "Archivos Enviados", value: submitedFiles },
+      { name: "Bytes Enviados", value: formatFilesize(submitedBytes) },
+      { name: "Total Archivos", value: totalFiles },
       { name: "Total Bytes", value: formatFilesize(totalBytes) },
     ];
 
@@ -149,26 +149,26 @@ const NewTapeDialog = ({ job }: { job: Job }) => {
   return (
     <Fragment>
       <Button size="small" onClick={handleClickOpen}>
-        Load Tape
+        Cargar Cinta
       </Button>
       {param && (
         <Dialog open={true} onClose={handleClose} maxWidth={"sm"} fullWidth>
-          <DialogTitle>Load Tape</DialogTitle>
+          <DialogTitle>Cargar Cinta</DialogTitle>
           <DialogContent>
-            <DialogContentText>After load tape into tape drive, click 'Submit'</DialogContentText>
-            <TextField select required margin="dense" label="Drive Device" fullWidth variant="standard" value={param.device} onChange={handleChange("device")}>
+            <DialogContentText>Tras cargar la cinta en la unidad, pulsa 'Enviar'</DialogContentText>
+            <TextField select required margin="dense" label="Dispositivo" fullWidth variant="standard" value={param.device} onChange={handleChange("device")}>
               {devices.map((device) => (
                 <MenuItem key={device} value={device}>
                   {device}
                 </MenuItem>
               ))}
             </TextField>
-            <TextField required margin="dense" label="Tape Barcode" fullWidth variant="standard" value={param.barcode} onChange={handleChange("barcode")} />
-            <TextField required margin="dense" label="Tape Name" fullWidth variant="standard" value={param.name} onChange={handleChange("name")} />
+            <TextField required margin="dense" label="Código Barcode" fullWidth variant="standard" value={param.barcode} onChange={handleChange("barcode")} />
+            <TextField required margin="dense" label="Nombre Cinta" fullWidth variant="standard" value={param.name} onChange={handleChange("name")} />
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleClose}>Cancel</Button>
-            <Button onClick={handleSubmit}>Submit</Button>
+            <Button onClick={handleClose}>Cancelar</Button>
+            <Button onClick={handleSubmit}>Enviar</Button>
           </DialogActions>
         </Dialog>
       )}
@@ -188,7 +188,7 @@ const ArchiveViewFilesDialog = ({ sources }: { sources: SourceState[] }) => {
   return (
     <Fragment>
       <Button size="small" onClick={handleClickOpen}>
-        View Files
+        Ver Archivos
       </Button>
       {open && <FileList title="View Files" onClose={handleClose} sources={sources} />}
     </Fragment>
@@ -207,7 +207,7 @@ const RollbackDialog = ({ jobID, state }: { jobID: bigint; state: JobArchiveStat
   return (
     <Fragment>
       <Button size="small" onClick={handleClickOpen}>
-        Rollback
+        Revertir
       </Button>
       {open && <RollbackFileList onClose={handleClose} jobID={jobID} state={state} />}
     </Fragment>
@@ -224,7 +224,7 @@ const RollbackFileList = ({ onClose, jobID, state }: { onClose: () => void; jobI
       }
 
       const path = found.source.base + found.source.path.join("/");
-      if (!confirm(`Rollback to file '${path}', all files after this file (included) will be set to 'PENDING'.`)) {
+      if (!confirm(`Revertir al archivo '${path}'. Todos los archivos posteriores (incluido) pasarán a 'PENDIENTE'.`)) {
         return;
       }
 
@@ -236,12 +236,12 @@ const RollbackFileList = ({ onClose, jobID, state }: { onClose: () => void; jobI
       await cli.jobEditState({ id: jobID, state: { state: { oneofKind: "archive", archive: { ...state, sources } } } });
       await refresh();
 
-      toast.success(`Rollback to file '${path}' success!`);
+      toast.success(`Archivo '${path}' revertido correctamente!`);
     },
     [state, refresh],
   );
 
-  return <FileList title="Click Rollback Target File" onClose={onClose} onClickItem={handleClickItem} sources={state.sources} />;
+  return <FileList title="Selecciona archivo para revertir"onClose={onClose} onClickItem={handleClickItem} sources={state.sources} />;
 };
 
 const FileList = memo(
@@ -266,7 +266,7 @@ const FileList = memo(
 
     return (
       <Dialog open={true} onClose={onClose} maxWidth={"lg"} fullWidth scroll="paper" sx={{ height: "100%" }} className="view-log-dialog">
-        <DialogTitle>{title}</DialogTitle>
+        <DialogTitle>Ver Archivos</DialogTitle>
         <DialogContent dividers style={{ padding: 0 }}>
           <Virtuoso
             style={{ width: "100%", height: "100%" }}
@@ -288,7 +288,7 @@ const FileList = memo(
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose}>Close</Button>
+          <Button onClick={onClose}>Cerrar</Button>
         </DialogActions>
       </Dialog>
     );

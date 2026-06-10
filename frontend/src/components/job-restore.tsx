@@ -92,15 +92,15 @@ export const RestoreCard = ({ job, state, display }: { job: Job; state: JobResto
 
     const progress = (totalBytes > 0 ? copiedBytes / totalBytes : 1) * 100;
     const fields = [
-      { name: "Current Step", value: JobArchiveStep[state.step] },
-      { name: "Current Speed", value: display?.speed ? `${formatFilesize(display?.speed)}/s` : "--" },
-      { name: "Average Speed", value: !isNaN(avgSpeed) ? `${formatFilesize(avgSpeed)}/s` : "--" },
-      { name: "Estimated Time", value: !isNaN(avgSpeed) ? format(((totalBytes - copiedBytes) * 1000) / avgSpeed) : "--" },
-      { name: "Copied Files", value: copiedFiles },
-      { name: "Copied Bytes", value: formatFilesize(copiedBytes) },
-      { name: "Success Files", value: successFiles },
-      { name: "Success Bytes", value: formatFilesize(successBytes) },
-      { name: "Total Files", value: totalFiles },
+      { name: "Paso Actual", value: JobArchiveStep[state.step] },
+      { name: "Velocidad Actual", value: display?.speed ? `${formatFilesize(display?.speed)}/s` : "--" },
+      { name: "Vel. Media", value: !isNaN(avgSpeed) ? `${formatFilesize(avgSpeed)}/s` : "--" },
+      { name: "Tiempo Estimado", value: !isNaN(avgSpeed) ? format(((totalBytes - copiedBytes) * 1000) / avgSpeed) : "--" },
+      { name: "Archivos Copiados", value: copiedFiles },
+      { name: "Bytes Copiados", value: formatFilesize(copiedBytes) },
+      { name: "Archivos Exitosos", value: successFiles },
+      { name: "Bytes Exitosos", value: formatFilesize(successBytes) },
+      { name: "Total Archivos", value: totalFiles },
       { name: "Total Bytes", value: formatFilesize(totalBytes) },
     ];
 
@@ -181,14 +181,14 @@ const LoadTapeDialog = ({ job }: { job: Job }) => {
   return (
     <Fragment>
       <Button size="small" onClick={handleClickOpen}>
-        Load Tape
+        Cargar Cinta
       </Button>
       {devices && (
         <Dialog open={true} onClose={handleClose} maxWidth={"sm"} fullWidth>
-          <DialogTitle>Load Tape</DialogTitle>
+          <DialogTitle>Cargar Cinta</DialogTitle>
           <DialogContent>
-            <DialogContentText>After load tape into tape drive, click 'Submit'</DialogContentText>
-            <TextField select required margin="dense" label="Drive Device" fullWidth variant="standard" value={device} onChange={handleChange}>
+            <DialogContentText>Tras cargar la cinta en la unidad, pulsa 'Enviar'</DialogContentText>
+            <TextField select required margin="dense" label="Dispositivo" fullWidth variant="standard" value={device} onChange={handleChange}>
               {devices.map((device) => (
                 <MenuItem key={device} value={device}>
                   {device}
@@ -197,8 +197,8 @@ const LoadTapeDialog = ({ job }: { job: Job }) => {
             </TextField>
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleClose}>Cancel</Button>
-            <Button onClick={handleSubmit}>Submit</Button>
+            <Button onClick={handleClose}>Cancelar</Button>
+            <Button onClick={handleSubmit}>Enviar</Button>
           </DialogActions>
         </Dialog>
       )}
@@ -275,11 +275,11 @@ const RestoreViewFilesDialog = ({ tapes }: { tapes: RestoreTape[] }) => {
   return (
     <Fragment>
       <Button size="small" onClick={handleClickOpen}>
-        View Files
+        Ver Archivos
       </Button>
       {open && (
         <Dialog open={true} onClose={handleClose} maxWidth={"lg"} fullWidth scroll="paper" sx={{ height: "100%" }} className="view-log-dialog">
-          <DialogTitle>View Files</DialogTitle>
+          <DialogTitle>Ver Archivos</DialogTitle>
           <DialogContent dividers style={{ padding: 0 }}>
             <Virtuoso
               style={{ width: "100%", height: "100%" }}
@@ -295,7 +295,7 @@ const RestoreViewFilesDialog = ({ tapes }: { tapes: RestoreTape[] }) => {
             />
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleClose}>Close</Button>
+            <Button onClick={handleClose}>Cerrar</Button>
           </DialogActions>
         </Dialog>
       )}

@@ -118,7 +118,7 @@ const useRestoreSourceBrowser = (targetFiles: FileArray, target: RefObject<FileB
 const targetFolderChain = [
   {
     id: "restore_waitlist",
-    name: "Restore Waitlist",
+    name: "Lista de Restaurar",
     isDir: true,
     openable: true,
     selectable: true,
@@ -180,7 +180,7 @@ const useRestoreTargetBrowser = () => {
             const fileIds = files.filter((file): file is FileData => !!file && file.id !== "0").map((file) => BigInt(file.id));
             console.log(await cli.jobCreate(makeParam(1n, { fileIds })).response);
 
-            toast.success("Create Restore Job Success!");
+            toast.success("¡Trabajo de restauración creado!");
           })();
           return;
       }

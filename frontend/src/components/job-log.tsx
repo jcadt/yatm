@@ -21,16 +21,16 @@ export const ViewLogDialog = ({ jobID }: { jobID: bigint }) => {
   return (
     <Fragment>
       <Button size="small" onClick={handleClickOpen}>
-        View Log
+        Ver Log
       </Button>
       {open && (
         <Dialog open={true} onClose={handleClose} maxWidth={"lg"} fullWidth scroll="paper" sx={{ height: "100%" }} className="view-log-dialog">
-          <DialogTitle>View Log</DialogTitle>
+          <DialogTitle>Ver Log</DialogTitle>
           <DialogContent dividers>
             <LogConsole jobId={jobID} />
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleClose}>Close</Button>
+            <Button onClick={handleClose}>Cerrar</Button>
           </DialogActions>
         </Dialog>
       )}
@@ -77,7 +77,7 @@ const LogConsole = ({ jobId }: { jobId: bigint }) => {
 
   return (
     <Fragment>
-      <pre>{log || "loading..."}</pre>
+      <pre>{log || "cargando..."}</pre>
       <div ref={bottom} />
     </Fragment>
   );

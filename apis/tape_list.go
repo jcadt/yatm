@@ -22,7 +22,7 @@ func (api *API) TapeList(ctx context.Context, req *entity.TapeListRequest) (*ent
 
 			return lo.Values(m), nil
 		default:
-			return nil, fmt.Errorf("unexpected list tape param, %T", req.GetParam())
+			return nil, fmt.Errorf("parámetro de lista de cintas inesperado, %T", req.GetParam())
 		}
 	}()
 	if err != nil {

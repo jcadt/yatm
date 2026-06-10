@@ -16,7 +16,7 @@ func (api *API) FileEdit(ctx context.Context, req *entity.FileEditRequest) (*ent
 		return nil, err
 	}
 	if file == nil {
-		return nil, fmt.Errorf("file not found, id= %d", req.Id)
+		return nil, fmt.Errorf("archivo no encontrado, id= %d", req.Id)
 	}
 
 	if req.File.ParentId != nil {
@@ -25,7 +25,7 @@ func (api *API) FileEdit(ctx context.Context, req *entity.FileEditRequest) (*ent
 	if req.File.Name != nil {
 		name := strings.TrimSpace(*req.File.Name)
 		if name == "" {
-			return nil, fmt.Errorf("unexpected target name, not a string")
+			return nil, fmt.Errorf("nombre de destino inesperado, no es una cadena")
 		}
 
 		if !strings.ContainsAny(name, `\/`) {
@@ -35,7 +35,7 @@ func (api *API) FileEdit(ctx context.Context, req *entity.FileEditRequest) (*ent
 
 			dirname, filename := path.Split(name)
 			if filename == "" {
-				return nil, fmt.Errorf("unexpected target name, end with slash, '%s'", name)
+				return nil, fmt.Errorf("nombre de destino inesperado, termina con barra, '%s'", name)
 			}
 
 			dir, err := api.lib.MkdirAll(ctx, file.ParentID, dirname, fs.ModePerm)

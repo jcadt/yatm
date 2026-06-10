@@ -118,7 +118,7 @@ const useFileBrowser = (storageKey: string, refreshAll: () => Promise<void>, ope
             }
             const file = files[0];
 
-            const name = prompt("Provide new name for this file:", file.name);
+            const name = prompt("Nuevo nombre para el archivo:", file.name);
             if (!name) {
               return;
             }
@@ -129,7 +129,7 @@ const useFileBrowser = (storageKey: string, refreshAll: () => Promise<void>, ope
           return;
         case CreateFolder.id:
           (async () => {
-            const name = prompt("Provide the name for your new folder:");
+            const name = prompt("Nombre para la nueva carpeta:");
             if (!name) {
               return;
             }

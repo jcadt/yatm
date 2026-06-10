@@ -12,7 +12,7 @@ import (
 var (
 	ModelJob = &Job{}
 
-	ErrJobNotFound = fmt.Errorf("get job: job not found")
+	ErrJobNotFound = fmt.Errorf("trabajo no encontrado")
 )
 
 type Job struct {
