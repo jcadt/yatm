@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# discover-devices — auto-detect LTO tape devices via sg_map
+# Outputs one device path per line (e.g., /dev/sg0, /dev/sg1)
+set -euo pipefail
+
+if ! command -v sg_map &>/dev/null; then
+    echo "ERROR: sg_map not found. Install sg3-utils: apt install sg3-utils" >&2
+    exit 1
+fi
+
+# sg_map output format: /dev/sg<N>  /dev/st<N>  <vendor> <product>
+# Example: /dev/sg0  /dev/st0  HP      Ultrium 6-SCSI
+sg_map 2>/dev/null | while read -r sg_dev _ vendor product; do
+    # Match LTO / Ultrium tape drives
+    product_upper="$(echo "$product" | tr '[:lower:]' '[:upper:]')"
+    if echo "$product_upper" | grep -q 'LTO\|ULTRIUM\|TAPE'; then
+        echo "$sg_dev"
+    elif echo "$vendor $product" | grep -qi 'tape\|drive'; then
+        echo "$sg_dev"
+    fi
+done

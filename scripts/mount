@@ -1,10 +1,25 @@
 #!/usr/bin/env bash
+# mount — mount LTFS tape with auto-detection of LTFS implementation
 set -ex;
 
 _script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SG_DEVICE="$("${_script_dir}/get_device")"
 
-ltfs -o devname="${SG_DEVICE}" -o noatime -o sync_type=unmount -o work_directory=/opt/yatm/captured_indices -o capture_index -o min_pool_size=256 -o max_pool_size=1024 -o eject -s "${MOUNT_POINT}"
+# Auto-detect LTFS binary
+LTFS_BIN=""
+if command -v ltfs &>/dev/null; then
+    LTFS_BIN="ltfs"
+elif command -v mount.ltofs &>/dev/null; then
+    LTFS_BIN="mount.ltofs"
+elif [[ -x "${_script_dir}/mount.openltfs" ]]; then
+    # Fall back to our openltfs wrapper
+    exec "${_script_dir}/mount.openltfs"
+else
+    echo "ERROR: no LTFS binary found (tried: ltfs, mount.ltofs, scripts/mount.openltfs)" >&2
+    exit 1
+fi
+
+"${LTFS_BIN}" -o devname="${SG_DEVICE}" -o noatime -o sync_type=unmount -o work_directory=/opt/yatm/captured_indices -o capture_index -o min_pool_size=256 -o max_pool_size=1024 -o eject -s "${MOUNT_POINT}"
 sleep 3
 
 MOUNT_POINT_TARGET="$(df "${MOUNT_POINT}" --output=target | sed -n '1!p')"

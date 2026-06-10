@@ -3,6 +3,8 @@ package executor
 import (
 	"context"
 	"fmt"
+	"os/exec"
+	"strings"
 	"sync"
 
 	mapset "github.com/deckarep/golang-set/v2"
@@ -10,6 +12,7 @@ import (
 	"github.com/samuelncui/yatm/entity"
 	"github.com/samuelncui/yatm/library"
 	"github.com/samuelncui/yatm/tools"
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -24,6 +27,7 @@ type Executor struct {
 	paths   Paths
 	scripts Scripts
 
+	jobEventBus *JobEventBus
 	jobExecutors *tools.CacheOnce[int64, JobExecutor]
 }
 
@@ -45,6 +49,15 @@ func New(
 	db *gorm.DB, lib *library.Library,
 	devices []string, paths Paths, scripts Scripts,
 ) *Executor {
+	if len(devices) == 0 {
+		discovered, err := discoverDevices(scripts)
+		if err != nil {
+			logrus.Warnf("device auto-discovery failed, %v", err)
+		} else if len(discovered) > 0 {
+			devices = discovered
+			logrus.Infof("auto-discovered tape devices: %v", devices)
+		}
+	}
 	e := &Executor{
 		db:               db,
 		lib:              lib,
@@ -52,10 +65,55 @@ func New(
 		availableDevices: mapset.NewThreadUnsafeSet(devices...),
 		paths:            paths,
 		scripts:          scripts,
+		jobEventBus:      NewJobEventBus(),
 	}
+
 	e.jobExecutors = tools.NewCacheOnce(e.newJobExecutor)
 
 	return e
+}
+
+
+
+func discoverDevices(scripts Scripts) ([]string, error) {
+	// Try the discover-devices script if available
+	mountDir := scripts.Mount
+	if idx := strings.LastIndex(mountDir, "/scripts/"); idx >= 0 {
+		scriptPath := mountDir[:idx] + "/scripts/discover-devices"
+		cmd := exec.Command(scriptPath)
+		output, err := cmd.Output()
+		if err == nil {
+			lines := strings.Fields(string(output))
+			if len(lines) > 0 {
+				return lines, nil
+			}
+		}
+	}
+
+	// Fallback: raw sg_map
+	cmd := exec.Command("sg_map")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("sg_map failed: %w", err)
+	}
+
+	var devices []string
+	for _, line := range strings.Split(string(output), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) < 4 {
+			continue
+		}
+		product := strings.ToUpper(fields[3])
+		if strings.Contains(product, "LTO") || strings.Contains(product, "ULTRIUM") || strings.Contains(product, "TAPE") {
+			devices = append(devices, fields[0])
+		}
+	}
+
+	return devices, nil
 }
 
 func (e *Executor) AutoMigrate() error {
@@ -142,4 +200,9 @@ func (e *Executor) Display(ctx context.Context, job *Job) (*entity.JobDisplay, e
 	}
 
 	return result, nil
+}
+
+// GetEventBus returns the job event bus for real-time subscriptions
+func (e *Executor) GetEventBus() *JobEventBus {
+	return e.jobEventBus
 }

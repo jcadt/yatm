@@ -98,17 +98,70 @@ export const JobsBrowser = () => {
   refreshRef.current = refresh;
 
   useEffect(() => {
+    // Initial fetch
     refreshRef.current(true);
-    const timer = setInterval(() => refreshRef.current(), 2000);
 
-    return () => {
-      if (!timer) {
-        return;
+    // Try SSE for real-time updates, fall back to polling
+    const apiBase: string = (() => {
+      const base = (window as any).apiBase as string;
+      if (!base || base === "%%API_BASE%%") {
+        return "http://localhost:5173/services";
       }
+      return base;
+    })();
+    const eventsUrl = apiBase.replace("/services", "/events");
 
-      clearInterval(timer);
-    };
+    let usePolling = false;
+    let timer: ReturnType<typeof setInterval> | undefined;
+
+    try {
+      const eventSource = new EventSource(eventsUrl);
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log("SSE event:", data);
+          refreshRef.current();
+        } catch {
+          console.warn("SSE parse error:", event.data);
+        }
+      };
+
+      eventSource.onerror = () => {
+        console.warn("SSE connection failed, falling back to polling");
+        eventSource.close();
+        usePolling = true;
+        timer = setInterval(() => refreshRef.current(), 2000);
+      };
+
+      // Fallback if SSE doesn't connect within 3s
+      const fallbackTimer = setTimeout(() => {
+        if (!usePolling) {
+          console.warn("SSE not connected within 3s, falling back to polling");
+          eventSource.close();
+          usePolling = true;
+          timer = setInterval(() => refreshRef.current(), 2000);
+        }
+      }, 3000);
+
+      return () => {
+        clearTimeout(fallbackTimer);
+        eventSource.close();
+        if (timer) {
+          clearInterval(timer);
+        }
+      };
+    } catch {
+      // EventSource not supported, fall back to polling
+      timer = setInterval(() => refreshRef.current(), 2000);
+      return () => {
+        if (timer) {
+          clearInterval(timer);
+        }
+      };
+    }
   }, []);
+
   useEffect(() => console.log("jobs changed,", jobs), [jobs]);
 
   return (
@@ -124,11 +177,6 @@ export const JobsBrowser = () => {
                 boxSizing: "border-box",
               }}
               component="nav"
-              // subheader={
-              //   <ListSubheader component="div" id="nested-list-subheader">
-              //     Nested List Items
-              //   </ListSubheader>
-              // }
             >
               <ListItemButton
                 onClick={async () => {

@@ -1,10 +1,25 @@
 #!/usr/bin/env bash
+# mount.openltfs — mount LTFS tape using OpenLTFS (alternative mount script)
 set -ex;
 
 _script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SG_DEVICE="$("${_script_dir}/get_device")"
 
-ltfs -o devname="${SG_DEVICE}" -o noatime -o sync_type=unmount -o work_directory=/opt/yatm/captured_indices -o capture_index=/opt/yatm/captured_indices -o min_pool_size=256 -o max_pool_size=1024 -o eject -s "${MOUNT_POINT}"
+# OpenLTFS typically provides its own ltfs binary
+LTFS_BIN=""
+for candidate in ltfs mount.ltofs mount.openltfs; do
+    if command -v "$candidate" &>/dev/null && [[ "$(command -v "$candidate")" != "$0" ]]; then
+        LTFS_BIN="$candidate"
+        break
+    fi
+done
+
+if [[ -z "$LTFS_BIN" ]]; then
+    echo "ERROR: no LTFS binary found for openltfs (tried: ltfs, mount.ltofs)" >&2
+    exit 1
+fi
+
+"${LTFS_BIN}" -o devname="${SG_DEVICE}" -o noatime -o sync_type=unmount -o work_directory=/opt/yatm/captured_indices -o capture_index=/opt/yatm/captured_indices -o min_pool_size=256 -o max_pool_size=1024 -o eject -s "${MOUNT_POINT}"
 sleep 3
 
 MOUNT_POINT_TARGET="$(df "${MOUNT_POINT}" --output=target | sed -n '1!p')"

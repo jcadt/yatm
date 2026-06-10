@@ -93,6 +93,41 @@ func main() {
 	mux.Handle("/services/", http.StripPrefix("/services/", grpcWebServer))
 	mux.Handle("/files/", http.StripPrefix("/files", api.Uploader()))
 
+	// SSE endpoint for real-time job updates
+	mux.HandleFunc("/events", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			http.Error(w, "streaming not supported", http.StatusInternalServerError)
+			return
+		}
+
+		_, ch, unsubscribe := exe.GetEventBus().Subscribe()
+		defer unsubscribe()
+
+		// Send initial keepalive
+		fmt.Fprintf(w, ": connected\n\n")
+		flusher.Flush()
+
+		for {
+			select {
+			case event, ok := <-ch:
+				if !ok {
+					return
+				}
+				data, _ := event.MarshalJSON()
+				fmt.Fprintf(w, "data: %s\n\n", data)
+				flusher.Flush()
+			case <-r.Context().Done():
+				return
+			}
+		}
+	})
+
 	fs := http.FileServer(http.Dir("./frontend/assets"))
 	mux.Handle("/assets/", http.StripPrefix("/assets/", fs))
 

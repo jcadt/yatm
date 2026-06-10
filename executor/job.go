@@ -50,8 +50,15 @@ func (e *Executor) DeleteJobs(ctx context.Context, ids ...int64) error {
 }
 
 func (e *Executor) SaveJob(ctx context.Context, job *Job) (*Job, error) {
+	oldStatus := job.Status
 	if r := e.db.WithContext(ctx).Save(job); r.Error != nil {
 		return nil, fmt.Errorf("save job fail, err= %w", r.Error)
+	}
+	if e.jobEventBus != nil && oldStatus != job.Status {
+		e.jobEventBus.Publish(JobEvent{
+			ID:     job.ID,
+			Status: int32(job.Status),
+		})
 	}
 	return job, nil
 }
