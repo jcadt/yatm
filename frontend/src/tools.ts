@@ -52,6 +52,8 @@ export const chonkyI18n: I18nConfig = {
     "chonky.actions.upload_files.button.name": "Subir archivos",
     "chonky.actions.download_files.button.name": "Descargar archivos",
     "chonky.actions.delete_files.button.name": "Eliminar archivos",
+    "chonky.fileList.nothingToShow": "No hay nada que mostrar",
+    "chonky.toolbar.searchPlaceholder": "Buscar",
     "chonky.actionGroups.Actions": "Acciones",
   },
   formatters: {
