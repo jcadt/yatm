@@ -2,12 +2,19 @@ package entity
 
 import (
 	"path"
+	"strings"
 
 	"github.com/samuelncui/acp"
 )
 
 func NewSourceFromACPJob(job *acp.Job) *Source {
-	return &Source{Base: job.Base, Path: job.Path}
+	// ACP v0.0.0-20260313 changed Path from []string to string
+	// Split the path into segments for backward compatibility
+	var pathSegments []string
+	if job.Path != "" {
+		pathSegments = strings.Split(job.Path, "/")
+	}
+	return &Source{Base: job.Base, Path: pathSegments}
 }
 
 func (x *Source) RealPath() string {
@@ -18,15 +25,15 @@ func (x *Source) RealPath() string {
 }
 
 func (x *Source) Append(more ...string) *Source {
-	path := make([]string, len(x.Path)+len(more))
-	copy(path, x.Path)
-	copy(path[len(x.Path):], more)
+	p := make([]string, len(x.Path)+len(more))
+	copy(p, x.Path)
+	copy(p[len(x.Path):], more)
 
-	return &Source{Base: x.Base, Path: path}
+	return &Source{Base: x.Base, Path: p}
 }
 
 func (x *Source) Compare(xx *Source) int {
-	la, lb := len(x.Path), len(x.Path)
+	la, lb := len(x.Path), len(xx.Path)
 
 	l := la
 	if lb < la {
@@ -60,7 +67,7 @@ func (x *Source) Compare(xx *Source) int {
 }
 
 func (x *Source) Equal(xx *Source) bool {
-	la, lb := len(x.Path), len(x.Path)
+	la, lb := len(x.Path), len(xx.Path)
 	if la != lb {
 		return false
 	}

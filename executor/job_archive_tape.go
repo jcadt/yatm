@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
 	"sort"
 	"strings"
 	"sync/atomic"
@@ -211,7 +210,7 @@ func (a *jobArchiveExecutor) makeTape(ctx context.Context, device, barcode, name
 			}
 
 			files = append(files, &library.TapeFile{
-				Path:      path.Join(job.Path...),
+				Path:      job.Path,
 				Size:      job.Size,
 				Mode:      job.Mode,
 				ModTime:   job.ModTime,

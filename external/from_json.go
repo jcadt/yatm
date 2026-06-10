@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"path"
 
 	"github.com/samuelncui/acp"
 	"github.com/samuelncui/yatm/library"
@@ -33,7 +32,7 @@ func (e *External) ImportACPReport(ctx context.Context, barname, name, encryptio
 		}
 
 		files = append(files, &library.TapeFile{
-			Path:      path.Join(f.Path...),
+			Path:      f.Path,
 			Size:      f.Size,
 			Mode:      f.Mode,
 			ModTime:   f.ModTime,
