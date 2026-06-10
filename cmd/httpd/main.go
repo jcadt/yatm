@@ -146,11 +146,11 @@ func main() {
 		fmt.Fprintf(w, `{"status":"ok"}`)
 	})
 
-	fs := http.FileServer(http.Dir("./frontend/assets"))
+	fs := http.FileServer(http.Dir("./frontend/dist/assets"))
 	mux.Handle("/assets/", http.StripPrefix("/assets/", fs))
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		indexBuf, err := os.ReadFile("./frontend/index.html")
+		indexBuf, err := os.ReadFile("./frontend/dist/index.html")
 		if err != nil {
 			panic(err)
 		}
