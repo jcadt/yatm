@@ -67,7 +67,7 @@ func main() {
 		panic(err)
 	}
 
-	exe := executor.New(db, lib, conf.TapeDevices, conf.Paths, conf.Scripts)
+	exe := executor.New(db, lib, conf.TapeDevices, conf.Paths, conf.Scripts, conf.TapeCapacity)
 	if err := exe.AutoMigrate(); err != nil {
 		panic(err)
 	}
@@ -126,6 +126,24 @@ func main() {
 				return
 			}
 		}
+	})
+
+	// Health check endpoint (for systemd, docker, load balancers)
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		sqlDB, err := db.DB()
+		if err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			fmt.Fprintf(w, `{"status":"error","message":"db connection failed"}`)
+			return
+		}
+		if err := sqlDB.Ping(); err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			fmt.Fprintf(w, `{"status":"error","message":"db ping failed"}`)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, `{"status":"ok"}`)
 	})
 
 	fs := http.FileServer(http.Dir("./frontend/assets"))

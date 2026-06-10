@@ -22,6 +22,7 @@ type Config struct {
 
 	Paths       executor.Paths   `yaml:"paths"`
 	TapeDevices []string         `yaml:"tape_devices"`
+	TapeCapacity int64           `yaml:"tape_capacity"`
 	Scripts     executor.Scripts `yaml:"scripts"`
 }
 

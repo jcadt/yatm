@@ -26,6 +26,7 @@ type Executor struct {
 
 	paths   Paths
 	scripts Scripts
+	tapeCapacity int64
 
 	jobEventBus *JobEventBus
 	jobExecutors *tools.CacheOnce[int64, JobExecutor]
@@ -47,8 +48,9 @@ type Scripts struct {
 
 func New(
 	db *gorm.DB, lib *library.Library,
-	devices []string, paths Paths, scripts Scripts,
+	devices []string, paths Paths, scripts Scripts, tapeCapacity int64,
 ) *Executor {
+	// Auto-discover devices if none configured
 	if len(devices) == 0 {
 		discovered, err := discoverDevices(scripts)
 		if err != nil {
@@ -58,6 +60,7 @@ func New(
 			logrus.Infof("auto-discovered tape devices: %v", devices)
 		}
 	}
+
 	e := &Executor{
 		db:               db,
 		lib:              lib,
@@ -65,55 +68,12 @@ func New(
 		availableDevices: mapset.NewThreadUnsafeSet(devices...),
 		paths:            paths,
 		scripts:          scripts,
+		tapeCapacity:     tapeCapacity,
 		jobEventBus:      NewJobEventBus(),
 	}
-
 	e.jobExecutors = tools.NewCacheOnce(e.newJobExecutor)
 
 	return e
-}
-
-
-
-func discoverDevices(scripts Scripts) ([]string, error) {
-	// Try the discover-devices script if available
-	mountDir := scripts.Mount
-	if idx := strings.LastIndex(mountDir, "/scripts/"); idx >= 0 {
-		scriptPath := mountDir[:idx] + "/scripts/discover-devices"
-		cmd := exec.Command(scriptPath)
-		output, err := cmd.Output()
-		if err == nil {
-			lines := strings.Fields(string(output))
-			if len(lines) > 0 {
-				return lines, nil
-			}
-		}
-	}
-
-	// Fallback: raw sg_map
-	cmd := exec.Command("sg_map")
-	output, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("sg_map failed: %w", err)
-	}
-
-	var devices []string
-	for _, line := range strings.Split(string(output), "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-		fields := strings.Fields(line)
-		if len(fields) < 4 {
-			continue
-		}
-		product := strings.ToUpper(fields[3])
-		if strings.Contains(product, "LTO") || strings.Contains(product, "ULTRIUM") || strings.Contains(product, "TAPE") {
-			devices = append(devices, fields[0])
-		}
-	}
-
-	return devices, nil
 }
 
 func (e *Executor) AutoMigrate() error {
@@ -201,8 +161,51 @@ func (e *Executor) Display(ctx context.Context, job *Job) (*entity.JobDisplay, e
 
 	return result, nil
 }
+func discoverDevices(scripts Scripts) ([]string, error) {
+	mountDir := scripts.Mount
+	if idx := strings.LastIndex(mountDir, "/scripts/"); idx >= 0 {
+		scriptPath := mountDir[:idx] + "/scripts/discover-devices"
+		cmd := exec.Command(scriptPath)
+		output, err := cmd.Output()
+		if err == nil {
+			lines := strings.Fields(string(output))
+			if len(lines) > 0 {
+				return lines, nil
+			}
+		}
+	}
+
+	cmd := exec.Command("sg_map")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("sg_map failed: %w", err)
+	}
+
+	var devices []string
+	for _, line := range strings.Split(string(output), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) < 4 {
+			continue
+		}
+		product := strings.ToUpper(fields[3])
+		if strings.Contains(product, "LTO") || strings.Contains(product, "ULTRIUM") || strings.Contains(product, "TAPE") {
+			devices = append(devices, fields[0])
+		}
+	}
+
+	return devices, nil
+}
 
 // GetEventBus returns the job event bus for real-time subscriptions
 func (e *Executor) GetEventBus() *JobEventBus {
 	return e.jobEventBus
+}
+
+// GetTapeCapacity returns the configured tape capacity in bytes
+func (e *Executor) GetTapeCapacity() int64 {
+	return e.tapeCapacity
 }

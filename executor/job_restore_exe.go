@@ -68,6 +68,12 @@ func (a *jobRestoreExecutor) dispatch(ctx context.Context, param *entity.JobRest
 
 			if err := a.restoreTape(tools.ShutdownContext, p.Device); err != nil {
 				a.logger.WithContext(ctx).WithError(err).Errorf("restore tape has error, device= '%s'", p.Device)
+				if setErr := a.updateJob(context.Background(), func(job *Job, state *entity.JobRestoreState) error {
+					job.Status = entity.JobStatus_FAILED
+					return nil
+				}); setErr != nil {
+					a.logger.WithContext(ctx).WithError(setErr).Errorf("failed to mark restore job as FAILED")
+				}
 			}
 		})
 

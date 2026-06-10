@@ -19,7 +19,13 @@ else
     exit 1
 fi
 
-"${LTFS_BIN}" -o devname="${SG_DEVICE}" -o noatime -o sync_type=unmount -o work_directory=/opt/yatm/captured_indices -o capture_index -o min_pool_size=256 -o max_pool_size=1024 -o eject -s "${MOUNT_POINT}"
+# Eject control: set NO_EJECT=true to skip -o eject (safer for libraries/loaders)
+EJECT_OPTS=""
+if [[ "${NO_EJECT:-}" != "true" ]]; then
+    EJECT_OPTS="-o eject"
+fi
+
+"${LTFS_BIN}" -o devname="${SG_DEVICE}" -o noatime -o sync_type=unmount -o work_directory=/opt/yatm/captured_indices -o capture_index -o min_pool_size=256 -o max_pool_size=1024 ${EJECT_OPTS} -s "${MOUNT_POINT}"
 sleep 3
 
 MOUNT_POINT_TARGET="$(df "${MOUNT_POINT}" --output=target | sed -n '1!p')"

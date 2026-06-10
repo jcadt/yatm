@@ -15,6 +15,11 @@ database:
 tape_devices:
   - /dev/tape/by-id/scsi-HUJ0000000
 
+# capacidad de cinta en bytes (opcional). Si se define, YATM estima si los sources caben
+# en una sola cinta y avisa antes de empezar el job.
+# Ejemplo: 2.5TB = 2500000000000
+# tape_capacity: 2500000000000
+
 # configuración de rutas de trabajo
 paths:
   # para guardar logs y escribir informes

@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# scan-tape — mount an LTFS tape and list its contents
+# Usage: scan-tape [--device /dev/sgX] [--barcode BARCODE]
+#   or: DEVICE=/dev/sgX TAPE_BARCODE=BARCODE scan-tape
+set -euo pipefail
+
+_script_dir="$(cd "$(dirname "$(readlink -f "$BASH_SOURCE[0]")")" && pwd)"
+YATM_DIR="$(cd "$_script_dir/.." && pwd)"
+
+DEVICE="${DEVICE:-${1:-}}"
+TAPE_BARCODE="${TAPE_BARCODE:-${2:-}}"
+
+if [[ -z "$DEVICE" ]]; then
+    echo "Usage: scan-tape <device> [barcode]"
+    echo "  or:  DEVICE=/dev/sgX TAPE_BARCODE=BARCODE scan-tape"
+    echo ""
+    echo "Auto-detecting LTO devices..."
+    if command -v sg_map &>/dev/null; then
+        sg_map | grep -i 'LTO\|ULTRIUM' || echo "No LTO devices found"
+    fi
+    exit 1
+fi
+
+# Create mount point
+MOUNT_POINT="$(mktemp -d /tmp/yatm-scan.XXXXXX)"
+trap "rm -rf '$MOUNT_POINT'" EXIT
+
+# Mount the tape
+export DEVICE MOUNT_POINT
+echo "Mounting $DEVICE on $MOUNT_POINT..."
+NO_EJECT=true "$_script_dir/mount" 2>&1 || {
+    echo "ERROR: mount failed" >&2
+    exit 1
+}
+
+# Walk the filesystem
+echo "Scanning tape contents..."
+OUTPUT_FILE="${TAPE_BARCODE:-tape}-manifest.json"
+echo '{"files":['
+FIRST=true
+find "$MOUNT_POINT" -type f -print0 | while IFS= read -r -d '' file; do
+    REL_PATH="${file#$MOUNT_POINT}"
+    SIZE=$(stat -c%s "$file" 2>/dev/null || echo 0)
+    MTIME=$(stat -c%Y "$file" 2>/dev/null || echo 0)
+    MODE=$(stat -c%f "$file" 2>/dev/null || echo "0")
+
+    if [[ "$FIRST" == "true" ]]; then
+        FIRST=false
+    else
+        echo ","
+    fi
+
+    cat << JSON
+  {
+    "path": "$REL_PATH",
+    "size": $SIZE,
+    "mod_time": $MTIME,
+    "mode": 0x$MODE
+  }
+JSON
+done
+echo ']}'
+
+# Unmount
+"$_script_dir/umount" 2>/dev/null || true
+
+echo ""
+echo "Manifest saved to: $OUTPUT_FILE"

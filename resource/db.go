@@ -3,6 +3,7 @@ package resource
 import (
 	"fmt"
 
+	"github.com/sirupsen/logrus"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -30,6 +31,12 @@ func NewDBConn(dialect, dsn string) (*gorm.DB, error) {
 
 		// Prevent "database locked" errors
 		sqlDB.SetMaxOpenConns(1)
+
+		// Enable WAL mode for better concurrent read performance
+		if r := db.Exec("PRAGMA journal_mode=WAL"); r.Error != nil {
+			logrus.Warnf("sqlite set WAL mode failed, %v", r.Error)
+		}
+		sqlDB.SetConnMaxLifetime(0)
 	}
 
 	return db, nil

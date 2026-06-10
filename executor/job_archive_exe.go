@@ -68,6 +68,13 @@ func (a *jobArchiveExecutor) dispatch(ctx context.Context, param *entity.JobArch
 
 			if err := a.makeTape(tools.ShutdownContext, p.Device, p.Barcode, p.Name); err != nil {
 				a.logger.WithContext(ctx).WithError(err).Errorf("make tape has error, barcode= '%s' name= '%s'", p.Barcode, p.Name)
+				// Transition to FAILED so the job doesn't stay PROCESSING forever
+				if setErr := a.updateJob(context.Background(), func(job *Job, state *entity.JobArchiveState) error {
+					job.Status = entity.JobStatus_FAILED
+					return nil
+				}); setErr != nil {
+					a.logger.WithContext(ctx).WithError(setErr).Errorf("failed to mark job as FAILED")
+				}
 			}
 		})
 
