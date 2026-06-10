@@ -1,8 +1,18 @@
 #!/usr/bin/env bash
+# mkfs -- format LTFS tape with auto-detection of LTFS implementation
 set -ex;
 
 _script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SG_DEVICE="$("${_script_dir}/get_device")"
 
-mkltfs -f -d "${SG_DEVICE}" -s "${TAPE_BARCODE}" -n "${TAPE_NAME}"
+# Auto-detect mkltfs binary
+MKLTFS_BIN=""
+if command -v mkltfs &>/dev/null; then
+    MKLTFS_BIN="mkltfs"
+else
+    echo "ERROR: no mkltfs binary found (tried: mkltfs)" >&2
+    exit 1
+fi
+
+"${MKLTFS_BIN}" -f -d "${SG_DEVICE}" -s "${TAPE_BARCODE}" -n "${TAPE_NAME}"
 sleep 3
