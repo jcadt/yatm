@@ -2,4 +2,4 @@
 set -ex;
 
 sleep 2
-umount ${MOUNT_POINT}
+umount "${MOUNT_POINT}"

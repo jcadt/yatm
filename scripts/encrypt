@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 set -ex;
 
-mt -f ${DEVICE} load
+_script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+mt -f "${DEVICE}" load
 sleep 5
 
 for i in {1..60}; do
-    stenc -f ${DEVICE} -e on -k ${KEY_FILE} -kd ${TAPE_BARCODE} -a 1 --ckod && break || sleep 5;
+    stenc -f "${DEVICE}" -e on -k "${KEY_FILE}" -kd "${TAPE_BARCODE}" -a 1 --ckod && break || sleep 5;
 done
 
 sleep 3

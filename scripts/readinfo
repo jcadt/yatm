@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -ex;
 
-mt -f ${DEVICE} load
-BARCODE=`./yatm-lto-info -f ${DEVICE} | grep 'Barcode' | awk '{print $3}'`
-echo "{\"barcode\": \"$BARCODE\"}" > $OUT
+_script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+mt -f "${DEVICE}" load
+BARCODE="$("${_script_dir}/yatm-lto-info" -f "${DEVICE}" | grep 'Barcode' | awk '{print $3}')"
+echo "{\"barcode\": \"${BARCODE}\"}" > "${OUT}"
 sleep 3

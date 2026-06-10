@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -ex;
 
-CURDIR=$(cd $(dirname $0); pwd);
-SG_DEVICE=`${CURDIR}/get_device`
+_script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SG_DEVICE="$("${_script_dir}/get_device")"
 
-mkltfs -f -d ${SG_DEVICE} -s ${TAPE_BARCODE} -n ${TAPE_NAME}
+mkltfs -f -d "${SG_DEVICE}" -s "${TAPE_BARCODE}" -n "${TAPE_NAME}"
 sleep 3
