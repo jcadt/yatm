@@ -190,7 +190,7 @@ const ArchiveViewFilesDialog = ({ sources }: { sources: SourceState[] }) => {
       <Button size="small" onClick={handleClickOpen}>
         Ver Archivos
       </Button>
-      {open && <FileList title="View Files" onClose={handleClose} sources={sources} />}
+      {open && <FileList title="Ver Archivos" onClose={handleClose} sources={sources} />}
     </Fragment>
   );
 };

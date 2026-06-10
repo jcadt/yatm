@@ -31,7 +31,7 @@ export const cli = (() => {
 
 export const Root: FileData = {
   id: "0",
-  name: "Root",
+  name: "Raíz",
   isDir: true,
   openable: true,
   selectable: true,

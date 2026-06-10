@@ -96,7 +96,7 @@ const App = () => {
           allowScrollButtonsMobile
         >
           <Tab label="Archivos" value={FileBrowserType} />
-          <Tab label="Backup" value={BackupType} />
+          <Tab label="Copia de Seguridad" value={BackupType} />
           <Tab label="Restaurar" value={RestoreType} />
           <Tab label="Cintas" value={TapesType} />
           <Tab label="Trabajos" value={JobsType} />

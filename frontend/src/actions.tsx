@@ -23,7 +23,7 @@ export const RenameFileAction = defineFileAction({
     name: "Renombrar Archivo",
     toolbar: true,
     contextMenu: true,
-    group: "Actions",
+    group: "Acciones",
     icon: "mui-rename",
   },
   __extraStateType: {} as RenameFileState,
