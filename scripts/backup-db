@@ -1,0 +1,79 @@
+#!/bin/bash
+# backup-db — backup YATM database with rotation
+# Usage: backup-db [--config ./config.yaml] [--backup-dir ./backups] [--keep N]
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$BASH_SOURCE[0]")")" && pwd)"
+DEFAULT_CONFIG="$SCRIPT_DIR/../config.yaml"
+KEEP=30
+
+# Parse args
+CONFIG="$DEFAULT_CONFIG"
+BACKUP_DIR=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --config) CONFIG="$2"; shift 2 ;;
+        --backup-dir) BACKUP_DIR="$2"; shift 2 ;;
+        --keep) KEEP="$2"; shift 2 ;;
+        *) echo "Unknown: $1"; exit 1 ;;
+    esac
+done
+
+if [[ ! -f "$CONFIG" ]]; then
+    echo "ERROR: config not found: $CONFIG"
+    exit 1
+fi
+
+# Extract DSN from config.yaml via grep (safe for simple yaml)
+DSN="$(grep -E '^\s*dsn:' "$CONFIG" | sed 's/.*dsn:\s*//' | tr -d ' \t'"'"'"')"
+if [[ -z "$DSN" ]]; then
+    echo "ERROR: could not parse dsn from $CONFIG"
+    exit 1
+fi
+
+# Resolve DB path relative to config dir
+CONFIG_DIR="$(cd "$(dirname "$(readlink -f "$CONFIG")")" && pwd)"
+DB_PATH="$(cd "$CONFIG_DIR" 2>/dev/null && realpath -m "$DSN" 2>/dev/null || echo "$CONFIG_DIR/$DSN")"
+
+if [[ ! -f "$DB_PATH" ]]; then
+    echo "WARNING: database not found at $DB_PATH, nothing to backup"
+    exit 0
+fi
+
+# Default backup dir: next to config.yaml
+if [[ -z "$BACKUP_DIR" ]]; then
+    BACKUP_DIR="$CONFIG_DIR/backups"
+fi
+mkdir -p "$BACKUP_DIR"
+
+DATE_STAMP="$(date +%Y%m%d-%H%M%S)"
+BASENAME="$(basename "$DSN")"
+BACKUP_FILE="$BACKUP_DIR/${BASENAME}.${DATE_STAMP}"
+LATEST_LINK="$BACKUP_DIR/${BASENAME}.latest"
+
+# Use sqlite3 .backup for safe concurrent backup
+if command -v sqlite3 &>/dev/null; then
+    sqlite3 "$DB_PATH" ".backup '$BACKUP_FILE'"
+else
+    # Last resort: cp (unsafe if YATM is writing)
+    cp -a "$DB_PATH" "$BACKUP_FILE"
+fi
+
+# Create/update latest symlink
+ln -sf "$BACKUP_FILE" "$LATEST_LINK"
+
+# Rotation: keep only last K, max one per day
+ALL_BACKUPS=()
+while IFS= read -r -d '' f; do
+    ALL_BACKUPS+=("$f")
+done < <(find "$BACKUP_DIR" -name "${BASENAME}.*" -type f ! -name '*.latest' -printf '%T@ %p\0' | sort -zn | cut -z -d' ' -f2-)
+
+COUNT="${#ALL_BACKUPS[@]}"
+if [[ "$COUNT" -gt "$KEEP" ]]; then
+    REMOVE=$((COUNT - KEEP))
+    for ((i=0; i<REMOVE; i++)); do
+        rm -f "${ALL_BACKUPS[$i]}"
+    done
+fi
+
+echo "OK: backed up $DB_PATH -> $BACKUP_FILE ($COUNT backups, keep $KEEP)"

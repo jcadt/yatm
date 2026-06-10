@@ -25,6 +25,8 @@ paths:
   target: ./
 
 # estos scripts interactúan con software externo, puede que necesites cambiarlos para tu caso.
+# backup_db no se referencia desde el código; se ejecuta como cron job independiente.
+#   daily: cd <yatm_dir> && ./scripts/backup-db
 scripts:
   # activa el cifrado hardware en la unidad de cinta
   encrypt: ./scripts/encrypt

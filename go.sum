@@ -374,6 +374,8 @@ github.com/samuelncui/acp v0.0.0-20231004032618-b13b740940ae h1:+qtA0L1BCdGRMX+T
 github.com/samuelncui/acp v0.0.0-20231004032618-b13b740940ae/go.mod h1:hGza8YRSjJZqNNT4INmxVM/26VJnr31LRZNwULopZTA=
 github.com/samuelncui/acp v0.0.0-20240318133912-af05f05ce1cb h1:/Lyv1RfY/DloQfPOXLHuARDSLW9gM2HUpwPyTb1dSWQ=
 github.com/samuelncui/acp v0.0.0-20240318133912-af05f05ce1cb/go.mod h1:hGza8YRSjJZqNNT4INmxVM/26VJnr31LRZNwULopZTA=
+github.com/samuelncui/acp v0.0.0-20260313131447-207085ec89a5 h1:LlhrXEEUwGAp3meMWMk6HpGx2SNsuuNiachiK9ZdYRo=
+github.com/samuelncui/acp v0.0.0-20260313131447-207085ec89a5/go.mod h1:yqopU7GYLh+td9uwX4HhejnfH3e+YUJ8ouxMDiblfYQ=
 github.com/samuelncui/godf v0.0.0-20231004032257-e436410ad5a0 h1:Xp01x8L8AAhrMkZpHKezRC1Hv0sXDCkpahXd3OORFLg=
 github.com/samuelncui/godf v0.0.0-20231004032257-e436410ad5a0/go.mod h1:lGc26yUHA5Fr2Cm/FzlkwCQJ9VtBUK9cue56biDDnWo=
 github.com/samuelncui/gorm v0.0.0-20231004143348-3fe5335dfd1e h1:zgYmcGYZFiEEWinCmOgPn/1tFg5ziGpkLH5AK41dByw=
