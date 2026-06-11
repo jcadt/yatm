@@ -79,10 +79,9 @@ const CollectionFileBrowser = ({ collectionId, collectionName, onBack }: { colle
     const id = parseInt(fileId);
     setCurrentFolderId(id);
     setFolderChain((prev) => {
-      // Only add to chain if not already navigating back
-      if (prev.length > 0 && prev[prev.length - 1].id === fileId) return prev;
+      if (prev.length > 0 && prev[prev.length - 1]!.id === fileId) return prev;
       const newChain = [...prev];
-      const file = files.find(f => f.id === fileId);
+      const file = files.find(f => f!.id === fileId);
       if (file) newChain.push(file);
       return newChain;
     });
@@ -91,7 +90,7 @@ const CollectionFileBrowser = ({ collectionId, collectionName, onBack }: { colle
   const handleNavigateUp = useCallback(() => {
     if (folderChain.length > 1) {
       const newChain = folderChain.slice(0, -1);
-      const parent = newChain[newChain.length - 1];
+      const parent = newChain[newChain.length - 1]!;
       setCurrentFolderId(parseInt(parent.id));
       setFolderChain(newChain);
     }
@@ -109,10 +108,10 @@ const CollectionFileBrowser = ({ collectionId, collectionName, onBack }: { colle
         <Box sx={{ flex: 1 }} />
       </Box>
       <Breadcrumbs sx={{ mb: 1 }}>
-        {folderChain.map((f, i) => (
+        {folderChain.filter(Boolean).map((f, i) => (
           i === folderChain.length - 1
-            ? <Typography key={f.id} variant="body2" color="text.primary">{f.name}</Typography>
-            : <Link key={f.id} variant="body2" href="#" onClick={(e) => { e.preventDefault(); handleNavigateUp(); }}>{f.name}</Link>
+            ? <Typography key={f!.id} variant="body2" color="text.primary">{f!.name}</Typography>
+            : <Link key={f!.id} variant="body2" href="#" onClick={(e: any) => { e.preventDefault(); handleNavigateUp(); }}>{f!.name}</Link>
         ))}
       </Breadcrumbs>
       <FileBrowser
@@ -124,7 +123,7 @@ const CollectionFileBrowser = ({ collectionId, collectionName, onBack }: { colle
           if (action.id === "open_files" && action.payload && action.payload.targetFile) {
             const file = action.payload.targetFile;
             // Check if it's a directory by looking at the mode (BigInt)
-            const f = files.find(f => f.id === file.id);
+            const f = files.find(f => f && f.id === file.id);
             if (f) {
               handleOpenFolder(file.id);
             }
