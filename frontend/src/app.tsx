@@ -12,11 +12,11 @@ import { BackupBrowser, BackupType } from "./pages/backup";
 import { RestoreBrowser, RestoreType } from "./pages/restore";
 import { TapesBrowser, TapesType } from "./pages/tapes";
 import { JobsBrowser, JobsType } from "./pages/jobs";
+import { CollectionsBrowser, CollectionsType } from "./pages/collections";
 
 import "./app.less";
 import { sleep } from "./tools";
-import { useEffect } from "react";
-import { useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 // import reactLogo from './assets/react.svg'
 // <img src={reactLogo} className="logo react" alt="React logo" />
@@ -99,6 +99,7 @@ const App = () => {
           <Tab label="Copia de Seguridad" value={BackupType} />
           <Tab label="Restaurar" value={RestoreType} />
           <Tab label="Cintas" value={TapesType} />
+          <Tab label="Colecciones" value={CollectionsType} />
           <Tab label="Trabajos" value={JobsType} />
         </Tabs>
         <Routes>
@@ -107,6 +108,7 @@ const App = () => {
             <Route path={BackupType} element={<Delay inner={<BackupBrowser />} />} />
             <Route path={RestoreType} element={<Delay inner={<RestoreBrowser />} />} />
             <Route path={TapesType} element={<Delay inner={<TapesBrowser />} />} />
+            <Route path={CollectionsType} element={<Delay inner={<CollectionsBrowser />} />} />
             <Route path={JobsType} element={<Delay inner={<JobsBrowser />} />} />
             <Route path="*" element={<Navigate to={"/" + FileBrowserType} replace />} />
           </Route>
