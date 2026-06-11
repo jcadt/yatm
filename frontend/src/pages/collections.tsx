@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -13,14 +13,17 @@ import {
   TextField,
   Typography,
   Chip,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
+  Breadcrumbs,
+  Link,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import AddIcon from "@mui/icons-material/Add";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import { convertFiles, Root } from "../api";
+import { FileBrowser, FileNavbar, FileList, FileContextMenu, FileArray, FileBrowserHandle } from "@samuelncui/chonky";
+import { chonkyI18n } from "../tools";
+import { useRef } from "react";
 
 const apiBase = (window as any).apiBase?.replace("/services", "") || "http://192.168.1.70:8080";
 
@@ -40,7 +43,111 @@ interface Tape {
 
 export const CollectionsType = "collections";
 
-export const CollectionsBrowser = ({ onBrowseCollection }: { onBrowseCollection?: (id: number, name: string) => void }) => {
+const CollectionFileBrowser = ({ collectionId, collectionName, onBack }: { collectionId: number; collectionName: string; onBack: () => void }) => {
+  const [currentFolderId, setCurrentFolderId] = useState(0);
+  const [folderChain, setFolderChain] = useState<FileArray>([Root]);
+  const [files, setFiles] = useState<FileArray>([]);
+  const [loading, setLoading] = useState(true);
+  const browserRef = useRef<FileBrowserHandle>(null);
+
+  const loadFiles = useCallback(async (parentId: number) => {
+    setLoading(true);
+    try {
+      const url = `${apiBase}/api/collections/${collectionId}/files?parent_id=${parentId}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const converted = convertFiles(data.map((f: any) => ({
+        id: f.id,
+        name: f.name,
+        mode: BigInt(f.mode),
+        size: BigInt(f.size || 0),
+        modTime: 0n,
+      })));
+      setFiles(converted);
+    } catch (e) {
+      console.error("load collection files fail", e);
+      setFiles([]);
+    }
+    setLoading(false);
+  }, [collectionId]);
+
+  useEffect(() => {
+    loadFiles(currentFolderId);
+  }, [currentFolderId, loadFiles]);
+
+  const handleOpenFolder = useCallback((fileId: string) => {
+    const id = parseInt(fileId);
+    setCurrentFolderId(id);
+    setFolderChain((prev) => {
+      // Only add to chain if not already navigating back
+      if (prev.length > 0 && prev[prev.length - 1].id === fileId) return prev;
+      const newChain = [...prev];
+      const file = files.find(f => f.id === fileId);
+      if (file) newChain.push(file);
+      return newChain;
+    });
+  }, [files]);
+
+  const handleNavigateUp = useCallback(() => {
+    if (folderChain.length > 1) {
+      const newChain = folderChain.slice(0, -1);
+      const parent = newChain[newChain.length - 1];
+      setCurrentFolderId(parseInt(parent.id));
+      setFolderChain(newChain);
+    }
+  }, [folderChain]);
+
+  const fileActions = useMemo(() => [], []);
+
+  return (
+    <Box>
+      <Box sx={{ display: "flex", alignItems: "center", mb: 1, gap: 1 }}>
+        <Button size="small" startIcon={<ArrowBackIcon />} onClick={onBack}>Volver a Colecciones</Button>
+        <Typography variant="subtitle1" sx={{ ml: 1 }}>
+          {collectionName}
+        </Typography>
+        <Box sx={{ flex: 1 }} />
+      </Box>
+      <Breadcrumbs sx={{ mb: 1 }}>
+        {folderChain.map((f, i) => (
+          i === folderChain.length - 1
+            ? <Typography key={f.id} variant="body2" color="text.primary">{f.name}</Typography>
+            : <Link key={f.id} variant="body2" href="#" onClick={(e) => { e.preventDefault(); handleNavigateUp(); }}>{f.name}</Link>
+        ))}
+      </Breadcrumbs>
+      <FileBrowser
+        instanceId="collection-files"
+        ref={browserRef}
+        files={files}
+        folderChain={folderChain}
+        onFileAction={(action: any) => {
+          if (action.id === "open_files" && action.payload && action.payload.targetFile) {
+            const file = action.payload.targetFile;
+            // Check if it's a directory by looking at the mode (BigInt)
+            const f = files.find(f => f.id === file.id);
+            if (f) {
+              handleOpenFolder(file.id);
+            }
+          }
+        }}
+        fileActions={fileActions}
+        i18n={chonkyI18n}
+      >
+        <FileNavbar />
+        <FileList />
+        <FileContextMenu />
+      </FileBrowser>
+      {loading && <Typography sx={{ textAlign: "center", mt: 2 }}>Cargando...</Typography>}
+      {!loading && files.length === 0 && (
+        <Typography color="text.secondary" sx={{ textAlign: "center", mt: 4 }}>
+          No hay nada que mostrar
+        </Typography>
+      )}
+    </Box>
+  );
+};
+
+export const CollectionsBrowser = () => {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
@@ -51,13 +158,13 @@ export const CollectionsBrowser = ({ onBrowseCollection }: { onBrowseCollection?
     collectionId: 0,
     tapeIdInput: "",
   });
+  const [browsing, setBrowsing] = useState<{ id: number; name: string } | null>(null);
 
   const loadCollections = useCallback(async () => {
     try {
       const res = await fetch(`${apiBase}/api/collections`);
       const data = await res.json();
       setCollections(data);
-      // Load tapes for each collection
       const tapes: Record<number, Tape[]> = {};
       for (const c of data) {
         const tres = await fetch(`${apiBase}/api/collections/${c.id}/tapes`);
@@ -107,6 +214,16 @@ export const CollectionsBrowser = ({ onBrowseCollection }: { onBrowseCollection?
     loadCollections();
   };
 
+  if (browsing) {
+    return (
+      <CollectionFileBrowser
+        collectionId={browsing.id}
+        collectionName={browsing.name}
+        onBack={() => setBrowsing(null)}
+      />
+    );
+  }
+
   return (
     <Box sx={{ p: 2 }}>
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
@@ -149,11 +266,9 @@ export const CollectionsBrowser = ({ onBrowseCollection }: { onBrowseCollection?
               )}
             </CardContent>
             <CardActions>
-              {onBrowseCollection && (
-                <Button size="small" startIcon={<FolderOpenIcon />} onClick={() => onBrowseCollection(col.id, col.name)}>
-                  Explorar
-                </Button>
-              )}
+              <Button size="small" startIcon={<FolderOpenIcon />} onClick={() => setBrowsing({ id: col.id, name: col.name })}>
+                Explorar
+              </Button>
               <Button
                 size="small"
                 onClick={() => setTapeDialog({ open: true, collectionId: col.id, tapeIdInput: "" })}
