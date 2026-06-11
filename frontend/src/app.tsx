@@ -1,4 +1,4 @@
-import { useCallback, ChangeEvent } from "react";
+import { useCallback, ChangeEvent, useEffect, useState } from "react";
 import { Routes, Route, useNavigate, Navigate, useLocation } from "react-router-dom";
 
 import Tabs from "@mui/material/Tabs";
@@ -16,7 +16,6 @@ import { CollectionsBrowser, CollectionsType } from "./pages/collections";
 
 import "./app.less";
 import { sleep } from "./tools";
-import { useEffect, useState, useCallback } from "react";
 
 // import reactLogo from './assets/react.svg'
 // <img src={reactLogo} className="logo react" alt="React logo" />
