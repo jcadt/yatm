@@ -308,7 +308,7 @@ func main() {
 			if parentIDStr != "" {
 				p, err := strconv.ParseInt(parentIDStr, 10, 64)
 				if err != nil {
-					http.Error(w, fmt.Sprintf(`{"error":"invalid parent_id"}`, http.StatusBadRequest))
+					http.Error(w, `{"error":"invalid parent_id"}`, http.StatusBadRequest)
 					return
 				}
 				parentID = p
