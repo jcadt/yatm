@@ -15,6 +15,68 @@ YATM es un gestor de cintas open-source pionero para cintas LTO mediante formato
 - Copia rápida con precarga de punteros de archivo, usa [ACP](https://github.com/samuelncui/acp). Optimizado para dispositivos lineales como cintas LTO.
 - Orden de copia ordenado según la posición en cinta para evitar el efecto shoe-shining.
 - Cifrado hardware por envoltura para cada cinta (no implementado completamente aún, se mejorará en el futuro).
+- **Colecciones virtuales**: agrupa cintas por temática y navega su contenido combinado como un solo sistema de archivos.
+- **Importación de cintas existentes**: escanea y registra cintas LTFS con `scripts/import-tape`.
+
+## Colecciones (Virtual Collections)
+
+YATM organiza las cintas en **colecciones** para agrupar cintas por temática (películas, series, backups, etc.). Una colección agrupa cintas enteras — no archivos individuales — y permite navegar el contenido combinado de todas las cintas de la colección como si fueran un solo sistema de archivos virtual.
+
+### Gestión desde la interfaz web
+
+En la pestaña **"Colecciones"** puedes:
+- **Crear** una colección nueva (nombre + descripción opcional)
+- **Eliminar** una colección existente
+- **Añadir cintas** a una colección desde el listado de cintas disponibles
+- **Quitar cintas** de una colección
+- **Explorar** el contenido combinado de todas las cintas de la colección mediante el navegador de archivos Chonky
+
+### API REST
+
+```bash
+# Listar colecciones
+curl -s http://localhost:8080/api/collections
+
+# Crear colección
+curl -s -X POST http://localhost:8080/api/collections \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Peliculas","description":"Peliculas y series"}'
+
+# Eliminar colección
+curl -s -X DELETE http://localhost:8080/api/collections/1
+
+# Anadir cinta a colección
+curl -s -X POST http://localhost:8080/api/collections/1/tapes \
+  -H 'Content-Type: application/json' \
+  -d '{"tape_id": 1}'
+
+# Quitar cinta de colección
+curl -s -X DELETE http://localhost:8080/api/collections/1/tapes/1
+
+# Explorar archivos de la colección
+curl -s http://localhost:8080/api/collections/1/files
+curl -s 'http://localhost:8080/api/collections/1/files?parent_id=0'
+```
+
+### Importar cintas existentes
+
+El script `scripts/import-tape` escanea una cinta LTFS montándola, registra todos sus archivos en la base de datos y opcionalmente la asigna a una colección.
+
+```bash
+# Escanear cinta y registrarla en la BD
+./scripts/import-tape --device /dev/sg0 --barcode PEL001
+
+# Escanear y asignar a colección (la crea si no existe)
+./scripts/import-tape --device /dev/sg0 --barcode PEL001 --collection "Peliculas"
+
+# Vista previa sin escribir en la BD
+./scripts/import-tape --device /dev/sg0 --dry-run --json-output manifest.json
+
+# Mas rapido (sin hasheo SHA256, util para cintas muy grandes)
+./scripts/import-tape --device /dev/sg0 --no-hash
+```
+
+Variables de entorno: `DEVICE`, `TAPE_BARCODE`, `TAPE_NAME`, `COLLECTION`, `YATM_DIR`, `DB_PATH`.
 
 ## Dependencias
 

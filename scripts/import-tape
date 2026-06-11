@@ -1,0 +1,430 @@
+#!/usr/bin/env python3
+"""
+import-tape — Scan an LTFS tape and register it in the YATM database.
+
+Usage:
+  ./import-tape.py --device /dev/sg0             # auto-detect barcode
+  ./import-tape.py --device /dev/sg0 --barcode ABC123
+  ./import-tape.py --device /dev/sg0 --collection "Películas"
+  ./import-tape.py --device /dev/sg0 --collection "Películas" --name "Pelis 2025"
+  ./import-tape.py --device /dev/sg0 --dry-run    # scan only, no DB writes
+
+Environment variables (fallback):
+  DEVICE, TAPE_BARCODE, TAPE_NAME, COLLECTION, YATM_DIR, DB_PATH
+"""
+
+import argparse
+import hashlib
+import json
+import os
+import stat as stat_module
+import sqlite3
+import subprocess
+import sys
+import tempfile
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+
+
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(
+        description="Scan an LTFS tape and register it in the YATM database"
+    )
+    parser.add_argument("--device", "-d",
+                        default=os.environ.get("DEVICE", ""),
+                        help="SG device path (e.g. /dev/sg0)")
+    parser.add_argument("--barcode", "-b",
+                        default=os.environ.get("TAPE_BARCODE", ""),
+                        help="Tape barcode (auto-detected if empty)")
+    parser.add_argument("--name", "-n",
+                        default=os.environ.get("TAPE_NAME", ""),
+                        help="Human-friendly tape name")
+    parser.add_argument("--collection", "-c",
+                        default=os.environ.get("COLLECTION", ""),
+                        help="Collection name to add the tape to")
+    parser.add_argument("--collection-id",
+                        type=int, default=None,
+                        help="Collection ID (alternative to --collection)")
+    parser.add_argument("--yatm-dir",
+                        default=os.environ.get("YATM_DIR", ""),
+                        help="YATM root directory (for scripts/)")
+    parser.add_argument("--db",
+                        default=os.environ.get("DB_PATH", ""),
+                        help="Path to tapes.db (auto-detected from yatm-dir)")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Scan only, print manifest, no DB writes")
+    parser.add_argument("--json-output",
+                        help="Write manifest JSON to this file")
+    parser.add_argument("--no-hash", action="store_true",
+                        help="Skip SHA256 hashing (faster, less accurate)")
+
+    args = parser.parse_args(argv)
+    args.dry_run = args.dry_run or os.environ.get("DRY_RUN", "").lower() in ("1", "true", "yes")
+    return args
+
+
+def resolve_paths(args):
+    """Resolve YATM dir and DB path."""
+    if not args.yatm_dir:
+        # Try to find yatm dir from script location or cwd
+        candidates = [
+            Path.cwd(),
+            Path.cwd() / "yatm",
+            Path.home() / "yatm",
+            Path(__file__).resolve().parent.parent,
+        ]
+        for c in candidates:
+            if (c / "config.yaml").exists() or (c / "tapes.db").exists() or (c / "scripts").is_dir():
+                args.yatm_dir = str(c)
+                break
+        if not args.yatm_dir:
+            # Last resort: check if we're inside the yatm tree
+            p = Path.cwd()
+            while p != p.parent:
+                if (p / "scripts").is_dir() and (p / "go.mod" or p / "tapes.db"):
+                    args.yatm_dir = str(p)
+                    break
+                p = p.parent
+
+    yatm_dir = Path(args.yatm_dir) if args.yatm_dir else Path.cwd()
+    if not args.db:
+        args.db = str(yatm_dir / "tapes.db")
+    return yatm_dir, Path(args.db)
+
+
+def run_script(script_path, env=None):
+    """Run a YATM script and return (stdout, stderr, exit_code)."""
+    proc = subprocess.run(
+        [str(script_path)],
+        capture_output=True, text=True, timeout=120,
+        env={**os.environ, **(env or {})}
+    )
+    return proc.stdout, proc.stderr, proc.returncode
+
+
+def mount_tape(yatm_dir, device, mount_point):
+    """Mount LTFS tape using YATM's mount script."""
+    mount_script = yatm_dir / "scripts" / "mount"
+    if not mount_script.exists():
+        print(f"ERROR: mount script not found at {mount_script}", file=sys.stderr)
+        sys.exit(1)
+
+    env = {
+        "DEVICE": device,
+        "MOUNT_POINT": mount_point,
+        "NO_EJECT": "true",
+    }
+    print(f"  Mounting {device} on {mount_point}...", flush=True)
+    stdout, stderr, rc = run_script(mount_script, env)
+    if rc != 0:
+        print(f"ERROR: mount failed (exit {rc})", file=sys.stderr)
+        if stderr:
+            print(f"  stderr: {stderr.strip()}", file=sys.stderr)
+        if stdout:
+            print(f"  stdout: {stdout.strip()}", file=sys.stderr)
+        return False
+    print(f"  Mount OK.", flush=True)
+    return True
+
+
+def unmount_tape(yatm_dir, mount_point):
+    """Unmount LTFS tape."""
+    umount_script = yatm_dir / "scripts" / "umount"
+    if not umount_script.exists():
+        print(f"WARNING: umount script not found at {umount_script}", file=sys.stderr)
+        return
+    stdout, stderr, rc = run_script(umount_script)
+    if rc != 0:
+        print(f"WARNING: umount exit code {rc}", file=sys.stderr)
+
+
+def scan_files(mount_point, no_hash=False):
+    """Walk mount point and collect file metadata."""
+    files = []
+    mount_path = Path(mount_point)
+
+    for fpath in mount_path.rglob("*"):
+        if not fpath.is_file() or fpath.is_symlink():
+            continue
+
+        rel_path = "/" + str(fpath.relative_to(mount_path))
+        st = fpath.stat()
+        size = st.st_size
+        mtime = int(st.st_mtime)
+        mode = st.st_mode
+
+        # SHA256 hash
+        if no_hash or size == 0:
+            file_hash = b""
+        else:
+            hasher = hashlib.sha256()
+            try:
+                with open(fpath, "rb") as f:
+                    while True:
+                        chunk = f.read(65536)
+                        if not chunk:
+                            break
+                        hasher.update(chunk)
+                file_hash = hasher.digest()
+            except (OSError, PermissionError) as e:
+                print(f"  WARNING: can't hash {rel_path}: {e}", file=sys.stderr)
+                file_hash = b""
+
+        files.append({
+            "path": rel_path,
+            "size": size,
+            "mod_time": mtime,
+            "mode": mode,
+            "hash": file_hash,
+        })
+    return files
+
+
+def format_size(n):
+    """Human-readable size."""
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if n < 1024:
+            return f"{n:.1f} {unit}"
+        n /= 1024
+    return f"{n:.1f} PB"
+
+
+def register_in_db(db_path, barcode, name, files, collection_name=None, collection_id=None, dry_run=False):
+    """Insert tape + positions into YATM SQLite DB. Optionally add to collection."""
+    print(f"  Database: {db_path}", flush=True)
+
+    if dry_run:
+        print("  DRY-RUN: skipping DB writes.", flush=True)
+        return None, None
+
+    if not os.path.isfile(db_path):
+        print(f"ERROR: database not found at {db_path}", file=sys.stderr)
+        print("  Start YATM first or specify --db", file=sys.stderr)
+        sys.exit(1)
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    # Check for existing barcode
+    if barcode:
+        cursor.execute("SELECT id, name FROM tapes WHERE barcode = ?", (barcode,))
+        existing = cursor.fetchone()
+        if existing:
+            print(f"  NOTE: tape with barcode '{barcode}' already exists (ID={existing['id']}, name='{existing['name']}').")
+            print("  Skipping tape creation.", flush=True)
+            tape_id = existing["id"]
+            # Still add to collection if requested
+            if collection_name or collection_id:
+                add_to_collection(cursor, conn, tape_id, collection_name, collection_id)
+            conn.close()
+            return tape_id, files
+
+    # Calculate total written bytes
+    total_bytes = sum(f["size"] for f in files)
+
+    # Create tape record
+    now = datetime.now(timezone.utc)
+    cursor.execute("""
+        INSERT INTO tapes (barcode, name, encryption, create_time, capacity_bytes, writen_bytes)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (barcode or "", name or barcode or f"tape-{int(time.time())}", "",
+          now.isoformat(), total_bytes, total_bytes))
+    tape_id = cursor.lastrowid
+    print(f"  Created tape record ID={tape_id}.", flush=True)
+
+    # Bulk insert positions
+    positions = []
+    for i, f in enumerate(files):
+        mod_dt = datetime.fromtimestamp(f["mod_time"], tz=timezone.utc)
+        positions.append((
+            tape_id,
+            f["path"],
+            f["mode"],
+            mod_dt.isoformat(),
+            now.isoformat(),
+            f["size"],
+            sqlite3.Binary(f["hash"]) if f["hash"] else None,
+        ))
+
+    cursor.executemany("""
+        INSERT INTO positions (tape_id, path, mode, mod_time, write_time, size, hash)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, positions)
+    conn.commit()
+    print(f"  Inserted {len(positions)} file positions.", flush=True)
+
+    # Add to collection if requested
+    if collection_name or collection_id:
+        add_to_collection(cursor, conn, tape_id, collection_name, collection_id)
+
+    conn.close()
+    return tape_id, files
+
+
+def add_to_collection(cursor, conn, tape_id, collection_name=None, collection_id=None):
+    """Find or create a collection and add the tape."""
+    if collection_id:
+        cursor.execute("SELECT id, name FROM collections WHERE id = ?", (collection_id,))
+        col = cursor.fetchone()
+        if not col:
+            print(f"ERROR: collection ID={collection_id} not found.", file=sys.stderr)
+            return
+        cid = col["id"]
+        cname = col["name"]
+    elif collection_name:
+        cursor.execute("SELECT id FROM collections WHERE name = ?", (collection_name,))
+        col = cursor.fetchone()
+        if col:
+            cid = col["id"]
+        else:
+            cursor.execute("INSERT INTO collections (name, description, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                           (collection_name, f"Auto-created by import-tape at {datetime.now(timezone.utc).isoformat()}",
+                            datetime.now(timezone.utc).isoformat(), datetime.now(timezone.utc).isoformat()))
+            cid = cursor.lastrowid
+            print(f"  Created new collection '{collection_name}' (ID={cid}).", flush=True)
+        cname = collection_name
+    else:
+        return
+
+    # Check if already in collection
+    cursor.execute("SELECT 1 FROM collection_tapes WHERE collection_id = ? AND tape_id = ?", (cid, tape_id))
+    if cursor.fetchone():
+        print(f"  Tape already in collection '{cname}' (ID={cid}).", flush=True)
+        return
+
+    cursor.execute("INSERT INTO collection_tapes (collection_id, tape_id, created_at) VALUES (?, ?, ?)",
+                   (cid, tape_id, datetime.now(timezone.utc).isoformat()))
+    conn.commit()
+    print(f"  Added tape to collection '{cname}' (ID={cid}).", flush=True)
+
+
+def print_summary(barcode, name, files, tape_id, collection_name, elapsed, dry_run):
+    """Print a human-readable summary."""
+    total_size = sum(f["size"] for f in files)
+    total_files = len(files)
+    dirs = len(set(str(Path(f["path"])).rsplit("/", 1)[0] for f in files))
+
+    print()
+    print("=" * 56)
+    print("  IMPORT SUMMARY")
+    print("=" * 56)
+    print(f"  Barcode:       {barcode or '(auto-detected)'}")
+    print(f"  Name:          {name or '(same as barcode)'}")
+    if not dry_run:
+        print(f"  Tape ID:       {tape_id}")
+    print(f"  Files:         {total_files}")
+    print(f"  Directories:   {dirs}")
+    print(f"  Total size:    {format_size(total_size)}")
+    print(f"  Duration:      {elapsed:.1f}s")
+    if collection_name:
+        print(f"  Collection:    {collection_name}")
+    if dry_run:
+        print(f"  [DRY RUN] No changes written to database.")
+    print("=" * 56)
+
+
+def main():
+    args = parse_args()
+    yatm_dir, db_path = resolve_paths(args)
+
+    if not args.device:
+        print("ERROR: --device is required. Use --device /dev/sg0 or set DEVICE env var.", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"YATM dir:  {yatm_dir}")
+    print(f"DB path:   {db_path}")
+    print(f"Device:    {args.device}")
+    print(f"Barcode:   {args.barcode or '(auto-detect on mount)'}")
+    print(f"Name:      {args.name or '(same as barcode)'}")
+    print(f"Collection: {args.collection or args.collection_id or '(none)'}")
+    if args.dry_run:
+        print(f"Mode:      DRY RUN (no DB writes)")
+    print()
+
+    # Mount
+    mount_point = tempfile.mkdtemp(prefix="yatm-import-")
+    print(f"Mount point: {mount_point}")
+    print()
+
+    start = time.time()
+
+    if not mount_tape(yatm_dir, args.device, mount_point):
+        unmount_tape(yatm_dir, mount_point)
+        sys.exit(1)
+
+    # Scan
+    print("Scanning files...", flush=True)
+    files = scan_files(mount_point, no_hash=args.no_hash)
+    print(f"  Found {len(files)} files.", flush=True)
+
+    # Generate barcode from first directory if not provided
+    barcode = args.barcode
+    if not barcode and files:
+        # Try to find a barcode label file or use tape serial
+        for f in files[:20]:
+            p = f["path"].lower()
+            if "barcode" in p or "label" in p or "serial" in p:
+                try:
+                    content_path = mount_point + f["path"]
+                    with open(content_path) as fh:
+                        content = fh.read().strip()
+                        if content:
+                            barcode = content[:15]
+                            print(f"  Auto-detected barcode: {barcode}", flush=True)
+                            break
+                except Exception:
+                    pass
+
+    name = args.name or barcode or "unknown"
+
+    # Write JSON output if requested
+    if args.json_output:
+        manifest = {
+            "device": args.device,
+            "barcode": barcode or "",
+            "name": name,
+            "scanned_at": datetime.now(timezone.utc).isoformat(),
+            "total_files": len(files),
+            "total_bytes": sum(f["size"] for f in files),
+            "files": [
+                {
+                    "path": f["path"],
+                    "size": f["size"],
+                    "mod_time": f["mod_time"],
+                    "mode": f["mode"],
+                    "hash_hex": f["hash"].hex() if f["hash"] else "",
+                }
+                for f in files
+            ],
+        }
+        with open(args.json_output, "w") as fh:
+            json.dump(manifest, fh, indent=2)
+        print(f"  Manifest written to {args.json_output}", flush=True)
+
+    # Register in DB
+    tape_id, _ = register_in_db(
+        db_path, barcode, name, files,
+        collection_name=args.collection,
+        collection_id=args.collection_id,
+        dry_run=args.dry_run,
+    )
+
+    # Unmount
+    print("Unmounting...", flush=True)
+    unmount_tape(yatm_dir, mount_point)
+
+    # Cleanup mount point
+    try:
+        os.rmdir(mount_point)
+    except OSError:
+        pass
+
+    elapsed = time.time() - start
+
+    print_summary(barcode, name, files, tape_id, args.collection, elapsed, args.dry_run)
+
+
+if __name__ == "__main__":
+    main()

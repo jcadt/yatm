@@ -44,3 +44,5 @@ scripts:
   umount: ./scripts/umount
   # lee el barcode de la cinta para trabajos de restauración
   read_info: ./scripts/readinfo
+  # importa una cinta LTFS existente en la BD (monta, escanea, registra y desmonta)
+  # import_tape: ./scripts/import-tape
