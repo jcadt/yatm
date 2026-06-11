@@ -3,12 +3,15 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"runtime/debug"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
@@ -144,6 +147,192 @@ func main() {
 		}
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintf(w, `{"status":"ok"}`)
+	})
+
+	// Collection management REST API
+	mux.HandleFunc("/api/collections", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		switch r.Method {
+		case "OPTIONS":
+			w.WriteHeader(http.StatusOK)
+		case "GET":
+			cols, err := lib.ListCollections(r.Context())
+			if err != nil {
+				http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
+				return
+			}
+			data, _ := json.Marshal(cols)
+			w.Write(data)
+		case "POST":
+			var body struct {
+				Name        string `json:"name"`
+				Description string `json:"description"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusBadRequest)
+				return
+			}
+			col, err := lib.CreateCollection(r.Context(), body.Name, body.Description)
+			if err != nil {
+				http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
+				return
+			}
+			data, _ := json.Marshal(col)
+			w.WriteHeader(http.StatusCreated)
+			w.Write(data)
+		default:
+			http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+		}
+	})
+
+	// Single collection: DELETE, or sub-resources
+	mux.HandleFunc("/api/collections/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		// Parse path: /api/collections/{id}[/tapes[/{tapeID}]][/files]
+		parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/collections/"), "/")
+		if len(parts) < 1 || parts[0] == "" {
+			http.Error(w, `{"error":"missing collection id"}`, http.StatusBadRequest)
+			return
+		}
+
+		colID, err := strconv.ParseInt(parts[0], 10, 64)
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error":"invalid collection id: %s"}`, err.Error()), http.StatusBadRequest)
+			return
+		}
+
+		// One endpoint handles multiple sub-resources
+		if r.Method == "DELETE" && len(parts) == 1 {
+			// DELETE /api/collections/{id}
+			if err := lib.DeleteCollection(r.Context(), colID); err != nil {
+				http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		if len(parts) < 2 {
+			http.Error(w, `{"error":"invalid path"}`, http.StatusBadRequest)
+			return
+		}
+
+		switch parts[1] {
+		case "tapes":
+			if len(parts) == 2 {
+				// GET/POST /api/collections/{id}/tapes
+				if r.Method == "GET" {
+					tapeIDs, err := lib.ListCollectionTapes(r.Context(), colID)
+					if err != nil {
+						http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
+						return
+					}
+					tapes, err := lib.MGetTape(r.Context(), tapeIDs...)
+					if err != nil {
+						http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
+						return
+					}
+					result := make([]*entity.Tape, 0, len(tapes))
+					for _, id := range tapeIDs {
+						if t, ok := tapes[id]; ok {
+							// Convert library.Tape to entity.Tape
+							result = append(result, &entity.Tape{
+								Id:            t.ID,
+								Barcode:       t.Barcode,
+								Name:          t.Name,
+								Encryption:    t.Encryption,
+								CreateTime:    t.CreateTime.Unix(),
+								CapacityBytes: t.CapacityBytes,
+								WritenBytes:   t.WritenBytes,
+							})
+						}
+					}
+					data, _ := json.Marshal(result)
+					w.Write(data)
+					return
+				}
+				if r.Method == "POST" {
+					var body struct {
+						TapeID int64 `json:"tape_id"`
+					}
+					if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+						http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusBadRequest)
+						return
+					}
+					if err := lib.AddTapeToCollection(r.Context(), colID, body.TapeID); err != nil {
+						http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
+						return
+					}
+					w.WriteHeader(http.StatusCreated)
+					fmt.Fprintf(w, `{"status":"ok"}`)
+					return
+				}
+			}
+			if len(parts) == 3 && r.Method == "DELETE" {
+				// DELETE /api/collections/{id}/tapes/{tapeID}
+				tapeID, err := strconv.ParseInt(parts[2], 10, 64)
+				if err != nil {
+					http.Error(w, fmt.Sprintf(`{"error":"invalid tape id: %s"}`, err.Error()), http.StatusBadRequest)
+					return
+				}
+				if err := lib.RemoveTapeFromCollection(r.Context(), colID, tapeID); err != nil {
+					http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
+					return
+				}
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+			http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
+
+		case "files":
+			// GET /api/collections/{id}/files?parent_id=X - list files in collection
+			if r.Method != "GET" {
+				http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+				return
+			}
+			parentIDStr := r.URL.Query().Get("parent_id")
+			parentID := int64(0)
+			if parentIDStr != "" {
+				p, err := strconv.ParseInt(parentIDStr, 10, 64)
+				if err != nil {
+					http.Error(w, fmt.Sprintf(`{"error":"invalid parent_id"}`, http.StatusBadRequest))
+					return
+				}
+				parentID = p
+			}
+			showHidden := r.URL.Query().Get("show_hidden") == "true"
+
+			// Get tape IDs for this collection
+			tapeIDs, err := lib.ListCollectionTapes(r.Context(), colID)
+			if err != nil {
+				http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
+				return
+			}
+
+			result, err := lib.ListFilesInCollection(r.Context(), colID, parentID, tapeIDs, showHidden)
+			if err != nil {
+				http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
+				return
+			}
+			data, _ := json.Marshal(result)
+			w.Write(data)
+
+		default:
+			http.Error(w, `{"error":"unknown sub-resource"}`, http.StatusNotFound)
+		}
 	})
 
 	fs := http.FileServer(http.Dir("./frontend/dist/assets"))

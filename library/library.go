@@ -28,7 +28,7 @@ func New(db *gorm.DB) *Library {
 }
 
 func (l *Library) AutoMigrate() error {
-	return l.db.AutoMigrate(ModelFile, ModelPosition, ModelTape)
+	return l.db.AutoMigrate(ModelFile, ModelPosition, ModelTape, ModelCollection, ModelCollectionTape)
 }
 
 type ExportLibrary struct {
