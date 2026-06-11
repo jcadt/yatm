@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
-
-	"gorm.io/gorm"
 )
 
 type CollectionFile struct {
